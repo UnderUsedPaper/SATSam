@@ -1,0 +1,3454 @@
+{
+  "version": 1,
+  "count": 100,
+  "questions": [
+    {
+      "id": "lin-eq-one-var-e-001",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear equations in one variable",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "What is the solution to the equation 3(x + 4) = 27 ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "5"
+        },
+        {
+          "id": "B",
+          "text": "9"
+        },
+        {
+          "id": "C",
+          "text": "13"
+        },
+        {
+          "id": "D",
+          "text": "15"
+        }
+      ],
+      "correct": "A",
+      "explanation": "Divide both sides by 3 to get x + 4 = 9, then subtract 4 from both sides to get x = 5.",
+      "distractors": {
+        "B": "Stops after dividing by 3 and reports the value of x + 4.",
+        "C": "Adds 4 to 9 instead of subtracting it.",
+        "D": "Distributes to get 3x = 15 and then reports 15 rather than dividing by 3."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "lin-eq-one-var-m-002",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear equations in one variable",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "What value of x satisfies the equation 5(2x - 3) - 4 = 3(x + 7) + 2 ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "2"
+        },
+        {
+          "id": "B",
+          "text": "4"
+        },
+        {
+          "id": "C",
+          "text": "6"
+        },
+        {
+          "id": "D",
+          "text": "8"
+        }
+      ],
+      "correct": "C",
+      "explanation": "The left side simplifies to 10x - 19 and the right side to 3x + 23. Subtracting 3x and adding 19 to both sides gives 7x = 42, so x = 6.",
+      "distractors": {
+        "A": "Results from dropping the constant -4 on the left side.",
+        "B": "Results from combining 10x and 3x as 13x rather than subtracting.",
+        "D": "Results from a sign error when moving 19 across the equals sign."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "lin-eq-one-var-h-003",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear equations in one variable",
+      "difficulty": "hard",
+      "format": "spr",
+      "stimulus": null,
+      "prompt": "If (2x + 5)/3 - (x - 4)/2 = 3, what is the value of x ?",
+      "choices": [],
+      "correct": "-4",
+      "explanation": "Multiply every term by 6 to clear the denominators: 2(2x + 5) - 3(x - 4) = 18. Expanding gives 4x + 10 - 3x + 12 = 18, which simplifies to x + 22 = 18, so x = -4.",
+      "distractors": {},
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "lin-eq-two-var-e-004",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear equations in two variables",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "What is the x-intercept of the graph of 4x + 3y = 24 in the xy-plane?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "(0, 6)"
+        },
+        {
+          "id": "B",
+          "text": "(0, 8)"
+        },
+        {
+          "id": "C",
+          "text": "(6, 0)"
+        },
+        {
+          "id": "D",
+          "text": "(8, 0)"
+        }
+      ],
+      "correct": "C",
+      "explanation": "At the x-intercept, y = 0. Substituting gives 4x = 24, so x = 6 and the intercept is (6, 0).",
+      "distractors": {
+        "A": "Uses the correct value of x but places it in the y-position.",
+        "B": "Finds the y-intercept and also reverses the coordinates.",
+        "D": "Sets x = 0 instead of y = 0, producing the y-intercept value 8."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "lin-eq-two-var-m-005",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear equations in two variables",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "A line in the xy-plane passes through the points (2, -1) and (6, 7). Which equation represents this line?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "y = 2x - 5"
+        },
+        {
+          "id": "B",
+          "text": "y = 2x + 3"
+        },
+        {
+          "id": "C",
+          "text": "y = (1/2)x - 2"
+        },
+        {
+          "id": "D",
+          "text": "y = -2x + 3"
+        }
+      ],
+      "correct": "A",
+      "explanation": "The slope is (7 - (-1)) / (6 - 2) = 8/4 = 2. Using the point (2, -1): -1 = 2(2) + b gives b = -5, so y = 2x - 5.",
+      "distractors": {
+        "B": "Uses the correct slope but makes a sign error when solving for the intercept.",
+        "C": "Inverts the slope by dividing the change in x by the change in y.",
+        "D": "Negates the slope."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "lin-eq-two-var-h-006",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear equations in two variables",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "In the xy-plane, the graph of 3x + ky = 12 is parallel to the graph of y = -(3/4)x + 5, where k is a constant. What is the value of k ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "-4"
+        },
+        {
+          "id": "B",
+          "text": "-3"
+        },
+        {
+          "id": "C",
+          "text": "3"
+        },
+        {
+          "id": "D",
+          "text": "4"
+        }
+      ],
+      "correct": "D",
+      "explanation": "Solving 3x + ky = 12 for y gives y = (-3/k)x + 12/k, so the slope is -3/k. Parallel lines have equal slopes, so -3/k = -3/4 and k = 4.",
+      "distractors": {
+        "A": "Introduces an extra negative when equating the slopes.",
+        "B": "Reports the coefficient of x from the rearranged equation.",
+        "C": "Drops the negative sign from the slope of the given line."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "linear-functions-e-007",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear functions",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "The function f is defined by f(x) = 7x - 9. What is the value of f(4) ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "-2"
+        },
+        {
+          "id": "B",
+          "text": "19"
+        },
+        {
+          "id": "C",
+          "text": "28"
+        },
+        {
+          "id": "D",
+          "text": "37"
+        }
+      ],
+      "correct": "B",
+      "explanation": "Substitute 4 for x: f(4) = 7(4) - 9 = 28 - 9 = 19.",
+      "distractors": {
+        "A": "Evaluates at x = 1 rather than x = 4.",
+        "C": "Multiplies but forgets to subtract 9.",
+        "D": "Adds 9 instead of subtracting it."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "linear-functions-m-008",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear functions",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "A mobile phone plan charges a fixed monthly fee plus a constant rate for each gigabyte of data used. A month in which 4 gigabytes are used costs $46, and a month in which 9 gigabytes are used costs $71.",
+      "prompt": "At this rate, what is the cost of a month in which 15 gigabytes are used?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "$86"
+        },
+        {
+          "id": "B",
+          "text": "$95"
+        },
+        {
+          "id": "C",
+          "text": "$101"
+        },
+        {
+          "id": "D",
+          "text": "$116"
+        }
+      ],
+      "correct": "C",
+      "explanation": "The per-gigabyte rate is (71 - 46) / (9 - 4) = $5. The fixed fee is 46 - 4(5) = $26. For 15 gigabytes the cost is 26 + 15(5) = $101.",
+      "distractors": {
+        "A": "Omits the fixed monthly fee from the final total.",
+        "B": "Uses a rate of $5 but subtracts the fixed fee instead of adding it.",
+        "D": "Scales the $71 cost proportionally, treating the plan as having no fixed fee."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "linear-functions-h-009",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear functions",
+      "difficulty": "hard",
+      "format": "spr",
+      "stimulus": null,
+      "prompt": "The linear function g satisfies g(2) = 13 and g(-4) = -5. What is the value of g(0) ?",
+      "choices": [],
+      "correct": "7",
+      "explanation": "The slope is (13 - (-5)) / (2 - (-4)) = 18/6 = 3, so g(x) = 3x + b. Substituting g(2) = 13 gives 13 = 6 + b, so b = 7. Since g(0) = b, the answer is 7.",
+      "distractors": {},
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "systems-two-lin-e-010",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Systems of two linear equations in two variables",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "x + y = 12\nx - y = 4",
+      "prompt": "The system of equations above has solution (x, y). What is the value of x ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "4"
+        },
+        {
+          "id": "B",
+          "text": "6"
+        },
+        {
+          "id": "C",
+          "text": "8"
+        },
+        {
+          "id": "D",
+          "text": "10"
+        }
+      ],
+      "correct": "C",
+      "explanation": "Adding the two equations eliminates y and gives 2x = 16, so x = 8.",
+      "distractors": {
+        "A": "Reports the value of y rather than x.",
+        "B": "Averages the two constants 12 and 4 without eliminating a variable.",
+        "D": "Adds the equations but divides 16 by a factor other than 2."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "systems-two-lin-m-011",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Systems of two linear equations in two variables",
+      "difficulty": "medium",
+      "format": "spr",
+      "stimulus": "3x + 2y = 16\nx = y + 2",
+      "prompt": "The system of equations above has solution (x, y). What is the value of x ?",
+      "choices": [],
+      "correct": "4",
+      "explanation": "Substituting x = y + 2 into the first equation gives 3(y + 2) + 2y = 16, or 5y + 6 = 16, so y = 2. Then x = 2 + 2 = 4.",
+      "distractors": {},
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "systems-two-lin-h-012",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Systems of two linear equations in two variables",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "2x + 6y = 14\nkx + 9y = 21",
+      "prompt": "In the system of equations above, k is a constant. If the system has infinitely many solutions, what is the value of k ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "2"
+        },
+        {
+          "id": "B",
+          "text": "3"
+        },
+        {
+          "id": "C",
+          "text": "4"
+        },
+        {
+          "id": "D",
+          "text": "6"
+        }
+      ],
+      "correct": "B",
+      "explanation": "Infinitely many solutions means the second equation is a multiple of the first. Since 9/6 = 3/2 and 21/14 = 3/2, the multiplier is 3/2, so k = (3/2)(2) = 3.",
+      "distractors": {
+        "A": "Assumes the coefficients of x must be identical.",
+        "C": "Adds the multiplier to the original coefficient instead of multiplying.",
+        "D": "Uses the coefficient of y from the first equation."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "linear-inequalities-e-013",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear inequalities in one or two variables",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "Which value of x satisfies the inequality 5x - 3 > 17 ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "2"
+        },
+        {
+          "id": "B",
+          "text": "3"
+        },
+        {
+          "id": "C",
+          "text": "4"
+        },
+        {
+          "id": "D",
+          "text": "5"
+        }
+      ],
+      "correct": "D",
+      "explanation": "Adding 3 to both sides gives 5x > 20, so x > 4. Of the choices, only 5 is greater than 4.",
+      "distractors": {
+        "A": "Satisfies 5x < 17 rather than the given inequality.",
+        "B": "Results from subtracting 3 instead of adding it.",
+        "C": "Is the boundary value; the strict inequality excludes it."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "linear-inequalities-m-014",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear inequalities in one or two variables",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "A food truck sells tacos for $3 each and burritos for $7 each. The owner wants the day's revenue from these two items to be at least $210.",
+      "prompt": "If t represents the number of tacos sold and b represents the number of burritos sold, which inequality represents this situation?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "3t + 7b ≤ 210"
+        },
+        {
+          "id": "B",
+          "text": "3t + 7b ≥ 210"
+        },
+        {
+          "id": "C",
+          "text": "7t + 3b ≥ 210"
+        },
+        {
+          "id": "D",
+          "text": "10(t + b) ≥ 210"
+        }
+      ],
+      "correct": "B",
+      "explanation": "Revenue is 3 dollars per taco plus 7 dollars per burrito, or 3t + 7b. The phrase \"at least $210\" translates to greater than or equal to 210.",
+      "distractors": {
+        "A": "Reverses the inequality; \"at least\" sets a minimum, not a maximum.",
+        "C": "Swaps the prices of the two items.",
+        "D": "Adds the two prices and applies the sum to every item sold."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "linear-inequalities-h-015",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear inequalities in one or two variables",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "What is the greatest integer value of x that satisfies -3x + 8 ≥ 2x - 12 ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "-4"
+        },
+        {
+          "id": "B",
+          "text": "1"
+        },
+        {
+          "id": "C",
+          "text": "4"
+        },
+        {
+          "id": "D",
+          "text": "20"
+        }
+      ],
+      "correct": "C",
+      "explanation": "Adding 3x and 12 to both sides gives 20 ≥ 5x, so x ≤ 4. The greatest integer satisfying this is 4.",
+      "distractors": {
+        "A": "Results from a sign error that flips the solution to x ≥ -4.",
+        "B": "Results from combining -3x and 2x as -x rather than isolating correctly.",
+        "D": "Stops at 20 ≥ 5x without dividing by 5."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "equivalent-expressions-e-016",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Equivalent expressions",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "Which expression is equivalent to (3x² + 5x - 2) + (x² - 8x + 7) ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "4x² - 3x + 5"
+        },
+        {
+          "id": "B",
+          "text": "4x² + 13x + 5"
+        },
+        {
+          "id": "C",
+          "text": "3x² - 3x + 5"
+        },
+        {
+          "id": "D",
+          "text": "4x² - 3x - 9"
+        }
+      ],
+      "correct": "A",
+      "explanation": "Combine like terms: 3x² + x² = 4x², 5x - 8x = -3x, and -2 + 7 = 5.",
+      "distractors": {
+        "B": "Subtracts rather than adds the x-terms, giving 5x - (-8x).",
+        "C": "Fails to combine the x² terms.",
+        "D": "Subtracts the constants instead of adding them."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "equivalent-expressions-m-017",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Equivalent expressions",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "Which expression is equivalent to (2x - 5)(3x + 4) ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "6x² - 20"
+        },
+        {
+          "id": "B",
+          "text": "6x² - 7x - 20"
+        },
+        {
+          "id": "C",
+          "text": "6x² + 7x - 20"
+        },
+        {
+          "id": "D",
+          "text": "6x² - 23x - 20"
+        }
+      ],
+      "correct": "B",
+      "explanation": "Distributing gives 6x² + 8x - 15x - 20. Combining the middle terms yields 6x² - 7x - 20.",
+      "distractors": {
+        "A": "Multiplies only the first and last terms of each binomial.",
+        "C": "Combines 8x and -15x as +7x, a sign error.",
+        "D": "Adds the absolute values of the middle terms instead of combining signed terms."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "equivalent-expressions-m-018",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Equivalent expressions",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "Which expression is equivalent to (x² - 9) / (x² + 7x + 12), where x ≠ -3 and x ≠ -4 ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "(x - 3) / (x + 4)"
+        },
+        {
+          "id": "B",
+          "text": "(x + 3) / (x + 4)"
+        },
+        {
+          "id": "C",
+          "text": "(x - 3) / (x - 4)"
+        },
+        {
+          "id": "D",
+          "text": "-9 / (7x + 12)"
+        }
+      ],
+      "correct": "A",
+      "explanation": "Factoring gives (x - 3)(x + 3) in the numerator and (x + 3)(x + 4) in the denominator. Canceling the common factor (x + 3) leaves (x - 3)/(x + 4).",
+      "distractors": {
+        "B": "Cancels the wrong factor from the numerator.",
+        "C": "Factors the denominator incorrectly as (x + 3)(x - 4).",
+        "D": "Cancels the x² terms, which is not valid across addition."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "equivalent-expressions-h-019",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Equivalent expressions",
+      "difficulty": "hard",
+      "format": "spr",
+      "stimulus": null,
+      "prompt": "If x is a positive number and (√x)³ = 64, what is the value of x ?",
+      "choices": [],
+      "correct": "16",
+      "explanation": "Rewrite the left side as x^(3/2) = 64. Raising both sides to the 2/3 power gives x = 64^(2/3), and since the cube root of 64 is 4, x = 4² = 16.",
+      "distractors": {},
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "nonlinear-eq-one-var-e-020",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Nonlinear equations in one variable",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "If x² - 7x + 12 = 0 and x > 3.5, what is the value of x ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "3"
+        },
+        {
+          "id": "B",
+          "text": "4"
+        },
+        {
+          "id": "C",
+          "text": "7"
+        },
+        {
+          "id": "D",
+          "text": "12"
+        }
+      ],
+      "correct": "B",
+      "explanation": "The expression factors as (x - 3)(x - 4) = 0, giving solutions x = 3 and x = 4. Only 4 is greater than 3.5.",
+      "distractors": {
+        "A": "Is the other solution, which does not satisfy x > 3.5.",
+        "C": "Is the sum of the two solutions.",
+        "D": "Is the product of the two solutions."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "nonlinear-eq-one-var-m-021",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Nonlinear equations in one variable",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "What is the positive solution to the equation 2x² + 5x - 12 = 0 ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "3/4"
+        },
+        {
+          "id": "B",
+          "text": "4/3"
+        },
+        {
+          "id": "C",
+          "text": "3/2"
+        },
+        {
+          "id": "D",
+          "text": "4"
+        }
+      ],
+      "correct": "C",
+      "explanation": "The expression factors as (2x - 3)(x + 4) = 0, giving x = 3/2 and x = -4. The positive solution is 3/2.",
+      "distractors": {
+        "A": "Divides 3 by 4 using the constant term rather than the leading coefficient.",
+        "B": "Inverts the correct fraction and uses the wrong numbers.",
+        "D": "Drops the negative sign from the other solution."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "nonlinear-eq-one-var-h-022",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Nonlinear equations in one variable",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "In the equation x² + 6x + c = 0, c is a constant. If the equation has exactly one real solution, what is the value of c ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "-9"
+        },
+        {
+          "id": "B",
+          "text": "3"
+        },
+        {
+          "id": "C",
+          "text": "6"
+        },
+        {
+          "id": "D",
+          "text": "9"
+        }
+      ],
+      "correct": "D",
+      "explanation": "A quadratic has exactly one real solution when its discriminant equals zero. Here b² - 4ac = 36 - 4c = 0, so c = 9.",
+      "distractors": {
+        "A": "Reverses the sign when solving 36 - 4c = 0.",
+        "B": "Takes half of 6 without completing the square.",
+        "C": "Reports the coefficient of x rather than the constant."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "nonlinear-eq-one-var-h-023",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Nonlinear equations in one variable",
+      "difficulty": "hard",
+      "format": "spr",
+      "stimulus": null,
+      "prompt": "What is the solution to the equation √(2x + 11) = x - 2 ?",
+      "choices": [],
+      "correct": "7",
+      "explanation": "Squaring both sides gives 2x + 11 = x² - 4x + 4, which rearranges to x² - 6x - 7 = 0, or (x - 7)(x + 1) = 0. Checking both candidates in the original equation, x = 7 works but x = -1 does not, since the square root cannot equal a negative number.",
+      "distractors": {},
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "nonlinear-functions-e-024",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Nonlinear functions",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "The function f is defined by f(x) = x² - 4x + 1. What is the value of f(3) ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "-2"
+        },
+        {
+          "id": "B",
+          "text": "4"
+        },
+        {
+          "id": "C",
+          "text": "10"
+        },
+        {
+          "id": "D",
+          "text": "22"
+        }
+      ],
+      "correct": "A",
+      "explanation": "Substituting 3 for x gives 9 - 12 + 1 = -2.",
+      "distractors": {
+        "B": "Results from computing 9 - 4 - 1.",
+        "C": "Results from squaring after subtracting rather than before.",
+        "D": "Adds 12 instead of subtracting it."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "nonlinear-functions-m-025",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Nonlinear functions",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "The function h is defined by h(x) = -2(x - 3)² + 8. What is the maximum value of h ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "-2"
+        },
+        {
+          "id": "B",
+          "text": "3"
+        },
+        {
+          "id": "C",
+          "text": "8"
+        },
+        {
+          "id": "D",
+          "text": "11"
+        }
+      ],
+      "correct": "C",
+      "explanation": "Because the coefficient -2 is negative, the parabola opens downward and its vertex is a maximum. In vertex form the vertex is (3, 8), so the maximum value is 8.",
+      "distractors": {
+        "A": "Reports the leading coefficient.",
+        "B": "Reports the x-coordinate of the vertex rather than the maximum value.",
+        "D": "Adds the x-coordinate of the vertex to the constant term."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "nonlinear-functions-m-026",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Nonlinear functions",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "The function f is defined by f(x) = (x + 2)(x - 6). What is the x-coordinate of the vertex of the graph of f in the xy-plane?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "-2"
+        },
+        {
+          "id": "B",
+          "text": "2"
+        },
+        {
+          "id": "C",
+          "text": "4"
+        },
+        {
+          "id": "D",
+          "text": "6"
+        }
+      ],
+      "correct": "B",
+      "explanation": "The zeros of f are x = -2 and x = 6. A parabola is symmetric about its vertex, so the vertex lies midway between the zeros, at x = (-2 + 6)/2 = 2.",
+      "distractors": {
+        "A": "Reports one of the zeros instead of the midpoint.",
+        "C": "Averages 2 and 6, ignoring the sign of the first zero.",
+        "D": "Reports the other zero."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "nonlinear-functions-h-027",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Nonlinear functions",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "A bacterial culture contains 300 cells at time t = 0, and the number of cells doubles every 5 hours.",
+      "prompt": "Which function models the number of cells, P, after t hours?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "P(t) = 300 · 2^(5t)"
+        },
+        {
+          "id": "B",
+          "text": "P(t) = 300 · 2^(t/5)"
+        },
+        {
+          "id": "C",
+          "text": "P(t) = 300 + 2^(t/5)"
+        },
+        {
+          "id": "D",
+          "text": "P(t) = 2 · 300^(t/5)"
+        }
+      ],
+      "correct": "B",
+      "explanation": "Exponential growth has the form (initial amount)(growth factor)^(t / period). The initial amount is 300, the growth factor is 2, and the doubling period is 5 hours, so P(t) = 300 · 2^(t/5).",
+      "distractors": {
+        "A": "Multiplies t by the period instead of dividing, producing doubling every 1/5 hour.",
+        "C": "Adds the growth term rather than multiplying, which models linear-plus-exponential growth.",
+        "D": "Swaps the base and the initial amount."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "ratios-rates-units-e-028",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Ratios, rates, proportional relationships, and units",
+      "difficulty": "easy",
+      "format": "spr",
+      "stimulus": "A cookie recipe calls for 3 cups of flour to make 24 cookies.",
+      "prompt": "At this rate, how many cups of flour are needed to make 40 cookies?",
+      "choices": [],
+      "correct": "5",
+      "explanation": "The recipe uses 3/24 = 0.125 cup of flour per cookie. For 40 cookies, 40 × 0.125 = 5 cups.",
+      "distractors": {},
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "ratios-rates-units-m-029",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Ratios, rates, proportional relationships, and units",
+      "difficulty": "medium",
+      "format": "spr",
+      "stimulus": "A car travels 234 miles in 4.5 hours at a constant speed.",
+      "prompt": "At this rate, how many miles will the car travel in 7 hours?",
+      "choices": [],
+      "correct": "364",
+      "explanation": "The speed is 234 / 4.5 = 52 miles per hour. In 7 hours the car travels 52 × 7 = 364 miles.",
+      "distractors": {},
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "ratios-rates-units-h-030",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Ratios, rates, proportional relationships, and units",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "A machine produces parts at a constant rate of 480 parts per hour.",
+      "prompt": "How many parts does the machine produce in 45 seconds?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "6"
+        },
+        {
+          "id": "B",
+          "text": "8"
+        },
+        {
+          "id": "C",
+          "text": "60"
+        },
+        {
+          "id": "D",
+          "text": "360"
+        }
+      ],
+      "correct": "A",
+      "explanation": "There are 3,600 seconds in an hour, so the rate is 480 / 3,600 = 2/15 parts per second. In 45 seconds the machine produces (2/15)(45) = 6 parts.",
+      "distractors": {
+        "B": "Divides 480 by 60 and then by another factor incorrectly.",
+        "C": "Treats 45 seconds as 45 minutes and divides 480 by 8.",
+        "D": "Treats 45 seconds as 45 minutes, giving three quarters of the hourly rate."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "percentages-e-031",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Percentages",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "18 is what percent of 45 ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "27%"
+        },
+        {
+          "id": "B",
+          "text": "40%"
+        },
+        {
+          "id": "C",
+          "text": "45%"
+        },
+        {
+          "id": "D",
+          "text": "250%"
+        }
+      ],
+      "correct": "B",
+      "explanation": "Divide the part by the whole: 18 / 45 = 0.4, which is 40%.",
+      "distractors": {
+        "A": "Subtracts 18 from 45 and reports the difference as a percent.",
+        "C": "Reports the whole rather than the ratio.",
+        "D": "Divides 45 by 18, reversing the part and the whole."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "percentages-m-032",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Percentages",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "The price of an item increased from $60 to $75. What was the percent increase?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "15%"
+        },
+        {
+          "id": "B",
+          "text": "20%"
+        },
+        {
+          "id": "C",
+          "text": "25%"
+        },
+        {
+          "id": "D",
+          "text": "80%"
+        }
+      ],
+      "correct": "C",
+      "explanation": "The increase is 75 - 60 = 15. Percent increase divides the change by the original value: 15 / 60 = 0.25, or 25%.",
+      "distractors": {
+        "A": "Reports the raw dollar change as a percent.",
+        "B": "Divides the change by the new price instead of the original.",
+        "D": "Reports the original price as a percent of the new price."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "percentages-h-033",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Percentages",
+      "difficulty": "hard",
+      "format": "spr",
+      "stimulus": "The price of a jacket was increased by 20%. The new price was then decreased by 20%. The final price was $96.",
+      "prompt": "What was the original price of the jacket, in dollars?",
+      "choices": [],
+      "correct": "100",
+      "explanation": "If p is the original price, the increase gives 1.2p and the decrease gives 0.8(1.2p) = 0.96p. Setting 0.96p = 96 gives p = 100. Note that the two 20% changes do not cancel, because they apply to different bases.",
+      "distractors": {},
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "one-var-data-e-034",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "One-variable data: distributions and measures",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "Data set: 4, 7, 7, 9, 13",
+      "prompt": "What is the median of the data set above?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "4"
+        },
+        {
+          "id": "B",
+          "text": "7"
+        },
+        {
+          "id": "C",
+          "text": "8"
+        },
+        {
+          "id": "D",
+          "text": "9"
+        }
+      ],
+      "correct": "B",
+      "explanation": "The values are already in order and there are five of them, so the median is the third value, 7.",
+      "distractors": {
+        "A": "Reports the minimum value.",
+        "C": "Reports the mean, 40 / 5 = 8, rather than the median.",
+        "D": "Counts from the wrong end of the ordered list."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "one-var-data-m-035",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "One-variable data: distributions and measures",
+      "difficulty": "medium",
+      "format": "spr",
+      "stimulus": "A data set of 5 values has a mean of 12. A sixth value, 30, is added to the data set.",
+      "prompt": "What is the mean of the new data set of 6 values?",
+      "choices": [],
+      "correct": "15",
+      "explanation": "The original sum is 5 × 12 = 60. Adding 30 gives a new sum of 90, and dividing by the new count of 6 gives a mean of 15.",
+      "distractors": {},
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "two-var-data-m-036",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Two-variable data: models and scatterplots",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "A scatterplot compares the number of hours students studied, x, with their scores on an exam, y. The line of best fit is given by y = 2.4x + 18.",
+      "prompt": "Which of the following best describes the meaning of 2.4 in this context?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "The predicted exam score for a student who did not study."
+        },
+        {
+          "id": "B",
+          "text": "The predicted increase in exam score for each additional hour studied."
+        },
+        {
+          "id": "C",
+          "text": "The total number of hours the average student studied."
+        },
+        {
+          "id": "D",
+          "text": "The highest exam score any student achieved."
+        }
+      ],
+      "correct": "B",
+      "explanation": "In a linear model, the coefficient of x is the slope, which gives the predicted change in y for a one-unit increase in x. Here that means 2.4 additional points per additional hour of study.",
+      "distractors": {
+        "A": "Describes the y-intercept, 18, not the slope.",
+        "C": "Confuses a rate of change with a total quantity.",
+        "D": "A line of best fit predicts averages, not maximum observed values."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "two-var-data-m-037",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Two-variable data: models and scatterplots",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "A researcher models a relationship with the line of best fit y = 1.8x + 12.",
+      "prompt": "According to the model, what is the predicted value of y when x = 25 ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "30"
+        },
+        {
+          "id": "B",
+          "text": "45"
+        },
+        {
+          "id": "C",
+          "text": "57"
+        },
+        {
+          "id": "D",
+          "text": "66"
+        }
+      ],
+      "correct": "C",
+      "explanation": "Substitute 25 for x: y = 1.8(25) + 12 = 45 + 12 = 57.",
+      "distractors": {
+        "A": "Adds 1.8 and 12 and then multiplies incorrectly.",
+        "B": "Multiplies but omits the constant term.",
+        "D": "Multiplies 1.8 by 30 rather than 25."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "probability-e-038",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Probability and conditional probability",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "A bag contains 5 red marbles, 7 blue marbles, and 8 green marbles. One marble is selected at random.",
+      "prompt": "What is the probability that the selected marble is green?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "1/5"
+        },
+        {
+          "id": "B",
+          "text": "7/20"
+        },
+        {
+          "id": "C",
+          "text": "2/5"
+        },
+        {
+          "id": "D",
+          "text": "3/5"
+        }
+      ],
+      "correct": "C",
+      "explanation": "There are 5 + 7 + 8 = 20 marbles in total and 8 are green, so the probability is 8/20 = 2/5.",
+      "distractors": {
+        "A": "Uses the count of red marbles rather than green.",
+        "B": "Uses the count of blue marbles.",
+        "D": "Uses the probability that the marble is not green."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "probability-h-039",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Probability and conditional probability",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "A school surveyed 150 students about their preferred class format. Among juniors, 45 preferred online classes and 15 preferred in-person classes. Among seniors, 30 preferred online classes and 60 preferred in-person classes.",
+      "prompt": "If a surveyed student is selected at random from among the juniors, what is the probability that the student preferred online classes?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "3/10"
+        },
+        {
+          "id": "B",
+          "text": "1/2"
+        },
+        {
+          "id": "C",
+          "text": "3/5"
+        },
+        {
+          "id": "D",
+          "text": "3/4"
+        }
+      ],
+      "correct": "D",
+      "explanation": "The condition restricts the sample space to juniors, of whom there are 45 + 15 = 60. Of those, 45 preferred online, so the probability is 45/60 = 3/4.",
+      "distractors": {
+        "A": "Divides 45 by the full survey total of 150 instead of by the number of juniors.",
+        "B": "Divides the 75 students preferring online by the total of 150, ignoring the condition.",
+        "C": "Divides the number of juniors, 60, by the number preferring online overall, 75."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "inference-margin-error-m-040",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Inference from sample statistics and margin of error",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "In a random sample of 500 residents of a city, 62% reported supporting a proposed transit measure. The margin of error for this estimate is 4 percentage points at a 95% confidence level.",
+      "prompt": "Which conclusion is most appropriate based on these results?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Exactly 62% of all residents of the city support the measure."
+        },
+        {
+          "id": "B",
+          "text": "Between 58% and 66% of the 500 residents sampled support the measure."
+        },
+        {
+          "id": "C",
+          "text": "It is plausible that between 58% and 66% of all residents of the city support the measure."
+        },
+        {
+          "id": "D",
+          "text": "All residents of the city would support the measure if they were surveyed again."
+        }
+      ],
+      "correct": "C",
+      "explanation": "A margin of error creates a plausible interval for the population value, not the sample value. Here that interval is 62% ± 4%, or 58% to 66%, and it describes all residents rather than only those surveyed.",
+      "distractors": {
+        "A": "Treats a sample estimate as an exact population value, which the margin of error explicitly rules out.",
+        "B": "Applies the interval to the sample, but the sample percentage is known exactly to be 62%.",
+        "D": "Makes a claim far stronger than any sample can support."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "area-and-volume-e-041",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Area and volume",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "A rectangular prism has edge lengths of 4, 5, and 9. What is its volume?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "18"
+        },
+        {
+          "id": "B",
+          "text": "36"
+        },
+        {
+          "id": "C",
+          "text": "90"
+        },
+        {
+          "id": "D",
+          "text": "180"
+        }
+      ],
+      "correct": "D",
+      "explanation": "The volume of a rectangular prism is the product of its three edge lengths: 4 × 5 × 9 = 180.",
+      "distractors": {
+        "A": "Adds the three edge lengths.",
+        "B": "Multiplies only two of the three edge lengths.",
+        "C": "Computes half the volume, as if applying a pyramid or triangle formula."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "area-and-volume-m-042",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Area and volume",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "A circle has an area of 49π. What is its circumference?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "7π"
+        },
+        {
+          "id": "B",
+          "text": "14π"
+        },
+        {
+          "id": "C",
+          "text": "24.5π"
+        },
+        {
+          "id": "D",
+          "text": "49π"
+        }
+      ],
+      "correct": "B",
+      "explanation": "Since the area is πr² = 49π, the radius is 7. The circumference is 2πr = 14π.",
+      "distractors": {
+        "A": "Reports π times the radius rather than 2π times the radius.",
+        "C": "Divides the area by 2 instead of using the circumference formula.",
+        "D": "Repeats the area's coefficient."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "area-and-volume-h-043",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Area and volume",
+      "difficulty": "hard",
+      "format": "spr",
+      "stimulus": "A right circular cylinder has a radius of 3 and a volume of 90π.",
+      "prompt": "What is the height of the cylinder?",
+      "choices": [],
+      "correct": "10",
+      "explanation": "The volume of a cylinder is πr²h. Substituting gives π(9)h = 90π, so 9h = 90 and h = 10.",
+      "distractors": {},
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "lines-angles-triangles-e-044",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Lines, angles, and triangles",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "Two angles are supplementary. If one angle measures 47 degrees, what is the measure of the other angle?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "43 degrees"
+        },
+        {
+          "id": "B",
+          "text": "53 degrees"
+        },
+        {
+          "id": "C",
+          "text": "133 degrees"
+        },
+        {
+          "id": "D",
+          "text": "143 degrees"
+        }
+      ],
+      "correct": "C",
+      "explanation": "Supplementary angles sum to 180 degrees, so the other angle measures 180 - 47 = 133 degrees.",
+      "distractors": {
+        "A": "Uses 90 degrees, which applies to complementary rather than supplementary angles.",
+        "B": "Subtracts from 100 degrees.",
+        "D": "Subtracts 47 from 190 rather than 180."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "lines-angles-triangles-m-045",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Lines, angles, and triangles",
+      "difficulty": "medium",
+      "format": "spr",
+      "stimulus": "In triangle ABC, the measure of angle A is 42 degrees and the measure of angle B is 73 degrees.",
+      "prompt": "What is the measure, in degrees, of angle C ?",
+      "choices": [],
+      "correct": "65",
+      "explanation": "The interior angles of a triangle sum to 180 degrees. Since 42 + 73 = 115, angle C measures 180 - 115 = 65 degrees.",
+      "distractors": {},
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "lines-angles-triangles-h-046",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Lines, angles, and triangles",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Triangle ABC is similar to triangle DEF, with vertex A corresponding to vertex D, vertex B to vertex E, and vertex C to vertex F. In triangle ABC, AB = 6 and BC = 8. In triangle DEF, DE = 9.",
+      "prompt": "What is the length of EF ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "5"
+        },
+        {
+          "id": "B",
+          "text": "11"
+        },
+        {
+          "id": "C",
+          "text": "12"
+        },
+        {
+          "id": "D",
+          "text": "13.5"
+        }
+      ],
+      "correct": "C",
+      "explanation": "Corresponding sides of similar triangles are proportional, so AB/DE = BC/EF. Substituting gives 6/9 = 8/EF, so EF = 8(9)/6 = 12.",
+      "distractors": {
+        "A": "Applies the scale factor in the wrong direction, shrinking rather than enlarging.",
+        "B": "Adds the difference between 6 and 9 to the length of BC instead of scaling.",
+        "D": "Applies the scale factor to DE again rather than to BC."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "right-triangles-trig-e-047",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Right triangles and trigonometry",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": null,
+      "prompt": "A right triangle has legs of length 9 and 12. What is the length of its hypotenuse?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "13"
+        },
+        {
+          "id": "B",
+          "text": "15"
+        },
+        {
+          "id": "C",
+          "text": "21"
+        },
+        {
+          "id": "D",
+          "text": "225"
+        }
+      ],
+      "correct": "B",
+      "explanation": "By the Pythagorean theorem, the hypotenuse is the square root of 9² + 12² = 81 + 144 = 225, which is 15.",
+      "distractors": {
+        "A": "Guesses a common Pythagorean value without computing.",
+        "C": "Adds the two leg lengths.",
+        "D": "Reports the sum of the squares without taking the square root."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "right-triangles-trig-h-048",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Right triangles and trigonometry",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "In right triangle ABC, angle B is the right angle and sin(A) = 3/5.",
+      "prompt": "What is the value of cos(A) ?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "3/5"
+        },
+        {
+          "id": "B",
+          "text": "4/5"
+        },
+        {
+          "id": "C",
+          "text": "5/4"
+        },
+        {
+          "id": "D",
+          "text": "5/3"
+        }
+      ],
+      "correct": "B",
+      "explanation": "If sin(A) = 3/5, the side opposite A is 3 and the hypotenuse is 5 in a similar triangle, so the adjacent side is 4 by the Pythagorean theorem. Therefore cos(A) = 4/5. Equivalently, sin²(A) + cos²(A) = 1 gives cos(A) = 4/5 for an acute angle.",
+      "distractors": {
+        "A": "Repeats the value of the sine.",
+        "C": "Reports the secant, the reciprocal of the cosine.",
+        "D": "Reports the cosecant, the reciprocal of the sine."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "circles-m-049",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Circles",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "In the xy-plane, a circle is represented by the equation (x - 3)² + (y + 5)² = 36.",
+      "prompt": "What are the center and radius of the circle?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Center (3, -5) and radius 6"
+        },
+        {
+          "id": "B",
+          "text": "Center (-3, 5) and radius 6"
+        },
+        {
+          "id": "C",
+          "text": "Center (3, -5) and radius 36"
+        },
+        {
+          "id": "D",
+          "text": "Center (-3, 5) and radius 36"
+        }
+      ],
+      "correct": "A",
+      "explanation": "In the form (x - h)² + (y - k)² = r², the center is (h, k) and the radius is r. Since y + 5 equals y - (-5), the center is (3, -5), and r² = 36 gives r = 6.",
+      "distractors": {
+        "B": "Reverses the signs of both coordinates of the center.",
+        "C": "Reports r² as the radius.",
+        "D": "Makes both the sign error and the radius error."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "circles-h-050",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Circles",
+      "difficulty": "hard",
+      "format": "spr",
+      "stimulus": "In the xy-plane, the equation x² + y² - 6x + 8y = 0 represents a circle.",
+      "prompt": "What is the radius of the circle?",
+      "choices": [],
+      "correct": "5",
+      "explanation": "Complete the square in both variables: (x² - 6x + 9) + (y² + 8y + 16) = 0 + 9 + 16, which gives (x - 3)² + (y + 4)² = 25. Since r² = 25, the radius is 5.",
+      "distractors": {},
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "words-in-context-e-051",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Words in Context",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "Although the museum's collection is small, its holdings are remarkably ______: in a single afternoon a visitor may encounter Byzantine icons, Edo-period folding screens, and contemporary video installations.",
+      "prompt": "Which choice completes the text with the most logical and precise word or phrase?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "uniform"
+        },
+        {
+          "id": "B",
+          "text": "varied"
+        },
+        {
+          "id": "C",
+          "text": "fragile"
+        },
+        {
+          "id": "D",
+          "text": "recent"
+        }
+      ],
+      "correct": "B",
+      "explanation": "The list that follows the blank spans widely different cultures, eras, and media, so the blank must describe range. \"Varied\" captures that diversity.",
+      "distractors": {
+        "A": "Means the opposite of what the list of dissimilar works demonstrates.",
+        "C": "Describes the condition of objects, which the text never addresses.",
+        "D": "Contradicts the inclusion of Byzantine and Edo-period works."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "words-in-context-e-052",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Words in Context",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "The assembly instructions were so ______ that even first-time users put the shelf together without difficulty.",
+      "prompt": "Which choice completes the text with the most logical and precise word or phrase?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "lucid"
+        },
+        {
+          "id": "B",
+          "text": "convoluted"
+        },
+        {
+          "id": "C",
+          "text": "tentative"
+        },
+        {
+          "id": "D",
+          "text": "ornate"
+        }
+      ],
+      "correct": "A",
+      "explanation": "The result described is that inexperienced users succeeded easily, so the blank must praise the instructions' clarity. \"Lucid\" means clear and easy to understand.",
+      "distractors": {
+        "B": "Means confusingly complex, which would not produce the described ease.",
+        "C": "Suggests hesitancy, which does not explain the users' success.",
+        "D": "Describes elaborate decoration, irrelevant to comprehensibility."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "words-in-context-m-053",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Words in Context",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Ecologist Suzanne Simard's early claims about nutrient sharing among trees were met with ______ from colleagues, who found the idea of cooperative forests difficult to reconcile with prevailing models built on competition.",
+      "prompt": "Which choice completes the text with the most logical and precise word or phrase?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "indifference"
+        },
+        {
+          "id": "B",
+          "text": "enthusiasm"
+        },
+        {
+          "id": "C",
+          "text": "resignation"
+        },
+        {
+          "id": "D",
+          "text": "skepticism"
+        }
+      ],
+      "correct": "D",
+      "explanation": "The colleagues found her idea hard to square with existing models, which indicates active doubt rather than mere reaction. \"Skepticism\" names that doubt.",
+      "distractors": {
+        "A": "Indifference implies no reaction, but the colleagues engaged with and resisted the claim.",
+        "B": "Contradicts the difficulty the colleagues had accepting the idea.",
+        "C": "Resignation implies reluctant acceptance, the opposite of resistance."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "words-in-context-m-054",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Words in Context",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Far from being ______, the poet's revisions were extensive: entire stanzas were cut, the speaker's gender was changed, and the final line was rewritten eleven times.",
+      "prompt": "Which choice completes the text with the most logical and precise word or phrase?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "deliberate"
+        },
+        {
+          "id": "B",
+          "text": "perplexing"
+        },
+        {
+          "id": "C",
+          "text": "superficial"
+        },
+        {
+          "id": "D",
+          "text": "laborious"
+        }
+      ],
+      "correct": "C",
+      "explanation": "The phrase \"far from being\" signals that the blank must contrast with \"extensive.\" \"Superficial\" means affecting only the surface, the opposite of the deep changes listed.",
+      "distractors": {
+        "A": "Deliberate revisions would be consistent with, not opposed to, extensive ones.",
+        "B": "Nothing in the text suggests the revisions were confusing.",
+        "D": "Laborious reinforces rather than contrasts with the scale of the revisions."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "words-in-context-h-055",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Words in Context",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Historians long treated the merchant's ledger as a ______ record of eighteenth-century trade. Recent analysis suggests, however, that he systematically understated his losses, rendering the document less a mirror of his business than an argument about it.",
+      "prompt": "Which choice completes the text with the most logical and precise word or phrase?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "meticulous"
+        },
+        {
+          "id": "B",
+          "text": "faithful"
+        },
+        {
+          "id": "C",
+          "text": "fragmentary"
+        },
+        {
+          "id": "D",
+          "text": "contested"
+        }
+      ],
+      "correct": "B",
+      "explanation": "The contrast drawn is between a mirror and an argument, so the issue is whether the ledger accurately reflects reality. \"Faithful\" means true to what it represents, which is precisely what the understated losses undermine.",
+      "distractors": {
+        "A": "Meticulous describes carefulness of execution; a systematically dishonest ledger could still be kept with great care, so the word does not create the needed contrast.",
+        "C": "Fragmentary would mean incomplete, but the objection is to accuracy rather than coverage.",
+        "D": "Contested describes how historians treat the document, not what they assumed it was."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "words-in-context-h-056",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Words in Context",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Wells's essay is not merely descriptive; it is ______, urging readers toward a specific course of action rather than leaving them to draw their own conclusions.",
+      "prompt": "Which choice completes the text with the most logical and precise word or phrase?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "prescriptive"
+        },
+        {
+          "id": "B",
+          "text": "speculative"
+        },
+        {
+          "id": "C",
+          "text": "impartial"
+        },
+        {
+          "id": "D",
+          "text": "elliptical"
+        }
+      ],
+      "correct": "A",
+      "explanation": "The blank is defined by the phrase that follows: the essay tells readers what to do. \"Prescriptive\" means laying down a rule or course of action.",
+      "distractors": {
+        "B": "Speculative suggests conjecture, not direction.",
+        "C": "Impartial contradicts the essay's push toward a specific action.",
+        "D": "Elliptical means omitting words or leaving gaps, which conflicts with the essay's explicit urging."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "text-structure-purpose-e-057",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Text Structure and Purpose",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "Mycelial networks, the threadlike fungal webs that spread beneath forest floors, were long treated as a curiosity of soil biology. Recent studies, however, have documented their role in transferring carbon between trees, buffering seedlings against drought, and even relaying chemical warnings of insect attack.",
+      "prompt": "What is the main purpose of the text?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "To explain the process by which mycelial networks form."
+        },
+        {
+          "id": "B",
+          "text": "To compare mycelial networks with the root systems of trees."
+        },
+        {
+          "id": "C",
+          "text": "To describe a shift in how the significance of mycelial networks is understood."
+        },
+        {
+          "id": "D",
+          "text": "To warn readers about threats facing forest ecosystems."
+        }
+      ],
+      "correct": "C",
+      "explanation": "The text contrasts an older view of the networks as a minor curiosity with recent findings that establish their importance. The purpose is to mark that change in understanding.",
+      "distractors": {
+        "A": "The text never describes how the networks develop.",
+        "B": "Root systems are not mentioned at all.",
+        "D": "Insect attack is mentioned only as something the networks signal, not as a warning to readers."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "text-structure-purpose-m-058",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Text Structure and Purpose",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Coral reefs cover less than one percent of the ocean floor. Yet they shelter roughly a quarter of all marine species, a concentration unmatched by any other marine habitat. This disproportion has made reef collapse a central concern for biologists studying biodiversity loss.",
+      "prompt": "Which choice best describes the function of the second sentence in the text as a whole?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "It offers evidence that disputes the claim made in the first sentence."
+        },
+        {
+          "id": "B",
+          "text": "It introduces a contrast that establishes the reefs' ecological importance relative to their size."
+        },
+        {
+          "id": "C",
+          "text": "It provides a definition of a technical term used in the first sentence."
+        },
+        {
+          "id": "D",
+          "text": "It describes a method biologists use to measure marine biodiversity."
+        }
+      ],
+      "correct": "B",
+      "explanation": "The word \"Yet\" sets the reefs' tiny area against the enormous share of species they support. That contrast is what the third sentence then labels a disproportion and treats as the reason reefs matter.",
+      "distractors": {
+        "A": "The second sentence does not challenge the area figure; it accepts it and adds a second fact.",
+        "C": "No term from the first sentence is defined.",
+        "D": "The text mentions no measurement methods."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "text-structure-purpose-m-059",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Text Structure and Purpose",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "In 1977, physicist Shirley Ann Jackson began research at Bell Laboratories that would eventually underpin technologies ranging from the portable fax machine to caller identification. Her work in theoretical physics rarely aimed at consumer devices directly; instead, it clarified the behavior of particles in ways that later engineers could exploit. The distance between her research and its applications is typical of basic science.",
+      "prompt": "What is the main purpose of the text?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "To argue that Jackson's contributions have been unfairly overlooked."
+        },
+        {
+          "id": "B",
+          "text": "To trace the technical development of caller identification."
+        },
+        {
+          "id": "C",
+          "text": "To compare theoretical physics and engineering as career paths."
+        },
+        {
+          "id": "D",
+          "text": "To use one researcher's work to illustrate how basic science yields applications indirectly."
+        }
+      ],
+      "correct": "D",
+      "explanation": "The final sentence generalizes from Jackson's case to basic science as a whole, which signals that the specific example serves the broader point.",
+      "distractors": {
+        "A": "The text makes no claim about recognition or its absence.",
+        "B": "Caller identification appears only as one item in a list, not as a subject of development.",
+        "C": "Engineers are mentioned, but the text does not weigh the two fields as careers."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "text-structure-purpose-h-060",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Text Structure and Purpose",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Critics of urban highway removal routinely predict traffic chaos. When Seoul dismantled the Cheonggyecheon expressway in 2003, that prediction seemed reasonable: the road carried roughly 168,000 vehicles daily. Yet congestion in the surrounding district fell. Drivers, it turned out, had not simply relocated to other roads; many had stopped driving altogether, a phenomenon transportation researchers call traffic evaporation.",
+      "prompt": "Which choice best describes the overall structure of the text?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "It defines a technical term and then supplies several examples of its use."
+        },
+        {
+          "id": "B",
+          "text": "It presents a widely held prediction, describes a case that appeared to support it, and then reports a contrary outcome along with its explanation."
+        },
+        {
+          "id": "C",
+          "text": "It compares two cities' approaches to highway removal and evaluates the results of each."
+        },
+        {
+          "id": "D",
+          "text": "It criticizes researchers for failing to anticipate a well-documented effect."
+        }
+      ],
+      "correct": "B",
+      "explanation": "The text opens with what critics predict, presents Seoul as a case where that prediction looked justified, reverses with \"Yet,\" and closes by naming the mechanism behind the reversal.",
+      "distractors": {
+        "A": "The term appears at the end as an explanation, not at the start as an organizing definition, and only one case is discussed.",
+        "C": "Only Seoul is discussed.",
+        "D": "Researchers are credited with naming the effect, not faulted for missing it."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "cross-text-connections-e-061",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Cross-Text Connections",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "Text 1\nArchaeologist Lena Ostrow maintains that the shell beads recovered from the site were produced locally, citing the presence of unfinished blanks in the same occupation layer.\n\nText 2\nOstrow's identification of the blanks is not in dispute. But chemical sourcing places the raw material more than 600 kilometers from the site, indicating that the stone, at least, arrived through trade.",
+      "prompt": "Based on the texts, the author of Text 2 would most likely characterize Ostrow's conclusion as",
+      "choices": [
+        {
+          "id": "A",
+          "text": "entirely mistaken, since the beads must have been manufactured elsewhere."
+        },
+        {
+          "id": "B",
+          "text": "accurate about where the beads were made but incomplete about where the materials came from."
+        },
+        {
+          "id": "C",
+          "text": "unsupported, because the blanks could have arrived at the site already finished."
+        },
+        {
+          "id": "D",
+          "text": "irrelevant to the question of long-distance trade at the site."
+        }
+      ],
+      "correct": "B",
+      "explanation": "Text 2 explicitly accepts Ostrow's evidence about the blanks, which supports local manufacture, while adding that the stone itself was imported. That is agreement about production plus a correction about sourcing.",
+      "distractors": {
+        "A": "Text 2 concedes the blanks are genuine, which supports local manufacture.",
+        "C": "Text 2 states the identification of the blanks is not disputed.",
+        "D": "Text 2 treats Ostrow's conclusion as directly relevant, since it revises rather than dismisses it."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "cross-text-connections-m-062",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Cross-Text Connections",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Text 1\nUrban ecologist Marta Rivas argues that city parks should prioritize native plantings. Native species, she contends, sustain populations of local insects that ornamental imports cannot support.\n\nText 2\nLandscape designer Owen Feld accepts the ecological case for native plantings but notes that a public park must be used in order to be defended. Ornamental species, he argues, draw the visitors whose attachment keeps parks funded and protected from development.",
+      "prompt": "Based on the texts, how would Feld most likely respond to Rivas's argument?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "By agreeing with her ecological reasoning while raising a practical consideration she does not address."
+        },
+        {
+          "id": "B",
+          "text": "By disputing her claim that native species sustain local insect populations."
+        },
+        {
+          "id": "C",
+          "text": "By arguing that park funding has no bearing on ecological outcomes."
+        },
+        {
+          "id": "D",
+          "text": "By asserting that ornamental species support insects more effectively than native species do."
+        }
+      ],
+      "correct": "A",
+      "explanation": "Feld is described as accepting the ecological case, so he does not contest Rivas's biology. His addition concerns visitor appeal and funding, a practical dimension absent from Text 1.",
+      "distractors": {
+        "B": "Text 2 states that Feld accepts the ecological case.",
+        "C": "Feld's whole point is that funding protects parks and therefore their ecology.",
+        "D": "Feld defends ornamentals on the basis of visitor appeal, not insect support."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "cross-text-connections-m-063",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Cross-Text Connections",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Text 1\nEconomist Priya Raman's survey of 4,000 employees found that fully remote workers reported higher job satisfaction than their in-office counterparts. Raman attributes the gap to the elimination of daily commuting.\n\nText 2\nOrganizational researcher Tomas Lind notes that satisfaction surveys capture how workers feel about their current arrangement, not how they would feel about an alternative. Workers who sought out remote positions, he argues, are likely those already best suited to them.",
+      "prompt": "Which choice best describes how Text 2 relates to Text 1?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "It supplies additional evidence supporting Raman's explanation of the satisfaction gap."
+        },
+        {
+          "id": "B",
+          "text": "It disputes the accuracy of the satisfaction measurements Raman collected."
+        },
+        {
+          "id": "C",
+          "text": "It challenges Raman's causal interpretation by proposing self-selection as an alternative explanation."
+        },
+        {
+          "id": "D",
+          "text": "It extends Raman's finding to a population of workers she did not survey."
+        }
+      ],
+      "correct": "C",
+      "explanation": "Lind does not question the numbers; he questions what causes them. His point that remote workers chose their arrangement raises the possibility that the group differed beforehand, which would explain the gap without reference to commuting.",
+      "distractors": {
+        "A": "Lind's point undercuts rather than supports Raman's attribution.",
+        "B": "Lind accepts that the surveys measure current feelings accurately.",
+        "D": "Lind discusses the same remote workers, not a new population."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "cross-text-connections-h-064",
+      "section": "reading_writing",
+      "domain": "Craft and Structure",
+      "skill": "Cross-Text Connections",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Text 1\nIn a 2019 study, psychologist Dana Whitaker found that participants who wrote about a stressful personal event for fifteen minutes reported lower anxiety one week later than participants who wrote about a neutral topic. Whitaker concluded that expressive writing produces durable emotional benefits.\n\nText 2\nResearcher Kwame Osei replicated Whitaker's procedure with a substantially larger sample and observed the same effect at one week. At a six-month follow-up, however, the anxiety scores of the two groups were statistically indistinguishable.",
+      "prompt": "Based on the texts, what would Osei most likely say about Whitaker's conclusion?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "It is unsupported, because the one-week effect did not replicate in his larger sample."
+        },
+        {
+          "id": "B",
+          "text": "It overstates the duration of an effect that his own data confirm exists initially."
+        },
+        {
+          "id": "C",
+          "text": "It is correct, but applies only to participants with high baseline anxiety."
+        },
+        {
+          "id": "D",
+          "text": "It should be discarded, because Whitaker's sample was too small to detect any effect at all."
+        }
+      ],
+      "correct": "B",
+      "explanation": "Osei reproduced the one-week result, so he agrees the effect is real in the short term. His six-month finding contradicts only the word \"durable,\" making his objection one of duration rather than existence.",
+      "distractors": {
+        "A": "Osei explicitly observed the same effect at one week.",
+        "C": "Neither text mentions baseline anxiety levels.",
+        "D": "Whitaker's study did detect an effect, and Osei confirmed it."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "central-ideas-details-e-065",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Central Ideas and Details",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "The axolotl, a salamander native to the lake system near Mexico City, retains its larval features throughout adulthood: feathery external gills, a finned tail, and a permanently aquatic life. It never undergoes the metamorphosis typical of related species. This condition, called neoteny, has made the animal a favorite subject among developmental biologists.",
+      "prompt": "Which choice best states the main idea of the text?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "The axolotl is endangered throughout its native habitat."
+        },
+        {
+          "id": "B",
+          "text": "Most salamanders undergo metamorphosis at a predictable age."
+        },
+        {
+          "id": "C",
+          "text": "Developmental biologists disagree about the causes of neoteny."
+        },
+        {
+          "id": "D",
+          "text": "The axolotl's retention of larval features into adulthood makes it valuable to researchers who study development."
+        }
+      ],
+      "correct": "D",
+      "explanation": "The text describes the retained larval traits, names the condition, and closes by noting the scientific interest that results. That combination is the main idea.",
+      "distractors": {
+        "A": "Conservation status is never mentioned.",
+        "B": "Related species are noted only in passing, without any claim about timing.",
+        "C": "No disagreement among researchers is described."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "central-ideas-details-m-066",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Central Ideas and Details",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Between 1930 and 1950, the Great Migration carried more than 1.5 million Black Americans from the rural South to cities in the North and West. Chicago's South Side, already a center of Black cultural life, absorbed a substantial share of them. Gospel composer Thomas A. Dorsey, who had arrived in the city earlier, found in these newcomers both an audience and a chorus: his blues-inflected sacred music spread through the city's churches within a decade.",
+      "prompt": "According to the text, what did the arriving migrants provide Dorsey?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Financial backing that allowed him to publish his compositions."
+        },
+        {
+          "id": "B",
+          "text": "Formal instruction in the conventions of sacred music."
+        },
+        {
+          "id": "C",
+          "text": "Both listeners for his music and performers to sing it."
+        },
+        {
+          "id": "D",
+          "text": "An opportunity to leave the rural South himself."
+        }
+      ],
+      "correct": "C",
+      "explanation": "The text states that Dorsey found in the newcomers an audience and a chorus, which are listeners and singers respectively.",
+      "distractors": {
+        "A": "No financial arrangement is described.",
+        "B": "The text presents Dorsey as the source of the music, not a student of it.",
+        "D": "Dorsey is described as having arrived earlier than the migrants in question."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "central-ideas-details-m-067",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Central Ideas and Details",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Tardigrades survive complete desiccation by replacing the water in their cells with a sugar-like molecule that vitrifies, or turns glassy, as it dries. In this state the animal's proteins are held rigidly in place, preventing the unfolding that would otherwise destroy them. Rehydration reverses the process within minutes.",
+      "prompt": "Based on the text, what is the function of vitrification in tardigrades?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "It accelerates the animal's metabolism during periods of drought."
+        },
+        {
+          "id": "B",
+          "text": "It immobilizes proteins so that they cannot unfold and be destroyed."
+        },
+        {
+          "id": "C",
+          "text": "It replaces damaged proteins with newly synthesized ones."
+        },
+        {
+          "id": "D",
+          "text": "It allows the animal to absorb water more rapidly when moisture returns."
+        }
+      ],
+      "correct": "B",
+      "explanation": "The text says the glassy state holds proteins rigidly in place, and that this prevents the unfolding that would destroy them. Physical immobilization is the stated mechanism.",
+      "distractors": {
+        "A": "The text describes preservation during dryness, not accelerated metabolism.",
+        "C": "No synthesis of new proteins is mentioned; existing ones are protected.",
+        "D": "Rapid rehydration is mentioned as an outcome of reversal, not the purpose of vitrification."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "central-ideas-details-h-068",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Central Ideas and Details",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "It is often said that the printing press democratized reading. The claim requires qualification. Printing did lower the cost of books dramatically. But literacy rates across most of Europe rose slowly for another two centuries, constrained less by the price of texts than by the scarcity of schooling. Cheap books mattered, but chiefly to those already equipped to use them.",
+      "prompt": "Which choice best states the main idea of the text?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "The printing press had almost no effect on European literacy rates."
+        },
+        {
+          "id": "B",
+          "text": "Schooling expanded rapidly across Europe after the invention of printing."
+        },
+        {
+          "id": "C",
+          "text": "Printing reduced the cost of books, but limited access to schooling kept its effect on literacy modest."
+        },
+        {
+          "id": "D",
+          "text": "Historians have overstated how expensive books were before the invention of printing."
+        }
+      ],
+      "correct": "C",
+      "explanation": "The text concedes the price effect, then identifies schooling as the binding constraint and concludes that cheap books helped mainly those who could already read. That is a qualification, not a rejection.",
+      "distractors": {
+        "A": "Too strong; the text says cheap books mattered, just not to everyone.",
+        "B": "The text says the opposite, describing schooling as scarce.",
+        "D": "The text affirms that printing lowered costs dramatically, implying books had been expensive."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "command-evidence-textual-e-069",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Command of Evidence (Textual)",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "A teacher claims that students retain material better when they are quizzed on it than when they simply reread it.",
+      "prompt": "Which finding, if true, would most directly support the teacher's claim?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Students who were quizzed on a passage scored higher on a delayed test than students who reread the same passage the same number of times."
+        },
+        {
+          "id": "B",
+          "text": "Students report feeling more confident after rereading a passage than after being quizzed on it."
+        },
+        {
+          "id": "C",
+          "text": "Students spend more total time rereading than they spend taking practice quizzes."
+        },
+        {
+          "id": "D",
+          "text": "Students say they enjoy rereading material more than they enjoy being quizzed."
+        }
+      ],
+      "correct": "A",
+      "explanation": "The claim is about retention, so the supporting evidence must compare later performance between the two study methods while holding exposure constant. Only this choice does that.",
+      "distractors": {
+        "B": "Confidence is a feeling, not a measure of retention, and this result would if anything cut against the claim.",
+        "C": "Time spent does not establish which method produces better retention.",
+        "D": "Enjoyment is unrelated to how much material students retain."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "command-evidence-textual-m-070",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Command of Evidence (Textual)",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Researcher Iris Kwan hypothesizes that urban crows solve unfamiliar puzzles faster than rural crows do because city life exposes them to a steady stream of novel objects.",
+      "prompt": "Which finding, if true, would most strongly support Kwan's hypothesis?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Urban and rural crows perform equally well on puzzles they have encountered before."
+        },
+        {
+          "id": "B",
+          "text": "Urban crows outperform rural crows on unfamiliar puzzles, and rural crows raised amid varied objects perform as well as urban crows."
+        },
+        {
+          "id": "C",
+          "text": "Urban crows have greater average body mass than rural crows."
+        },
+        {
+          "id": "D",
+          "text": "Rural crows gather in larger flocks than urban crows do."
+        }
+      ],
+      "correct": "B",
+      "explanation": "Kwan's hypothesis has two parts: a performance difference and exposure to novelty as its cause. This choice confirms the difference and then shows that supplying the proposed cause to rural crows erases it.",
+      "distractors": {
+        "A": "This is consistent with the hypothesis but says nothing about unfamiliar puzzles, which is the claim at issue.",
+        "C": "Body mass offers no link to novelty exposure or problem solving.",
+        "D": "Flock size is unrelated to the proposed mechanism."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "command-evidence-textual-m-071",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Command of Evidence (Textual)",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "In her novel The Quarry, Naomi Adjei narrates events through Felix, a foreman recalling a mine collapse twenty years earlier. A student argues that Felix is an unreliable narrator because he consistently recasts his own errors as the failures of others.",
+      "prompt": "Which quotation from The Quarry would best support the student's claim?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "\"The shaft had been reinforced the previous spring, as the company records show.\""
+        },
+        {
+          "id": "B",
+          "text": "\"The morning was cold, and the men worked a long while without speaking.\""
+        },
+        {
+          "id": "C",
+          "text": "\"I had ordered the survey myself; that the engineers ignored it is not a thing I can be blamed for.\""
+        },
+        {
+          "id": "D",
+          "text": "\"I have thought about that day for eleven years, and I think about it still.\""
+        }
+      ],
+      "correct": "C",
+      "explanation": "The student's claim is specifically about Felix shifting blame. This quotation shows him citing his own correct action and then assigning fault to others in the same breath.",
+      "distractors": {
+        "A": "This reports a fact without any attribution of blame.",
+        "B": "This is scene-setting and carries no self-justification.",
+        "D": "This shows preoccupation with the event, which might suggest guilt but does not shift blame."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "command-evidence-textual-h-072",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Command of Evidence (Textual)",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Ecologist Sam Okonjo proposes that the decline of a ground beetle species in restored grasslands results from the loss of bare soil patches, which the beetles require as egg-laying sites. To test this, Okonjo compared restored plots in which bare patches were artificially maintained with otherwise identical plots in which they were not.",
+      "prompt": "Which result would most strongly support Okonjo's proposal?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Beetle numbers were similar in both plot types, but plant diversity was higher where bare patches were maintained."
+        },
+        {
+          "id": "B",
+          "text": "Beetle numbers declined in both plot types over the course of the study."
+        },
+        {
+          "id": "C",
+          "text": "Beetles were repeatedly observed laying eggs on vegetation in plots without bare patches."
+        },
+        {
+          "id": "D",
+          "text": "Beetle numbers were substantially higher in plots where bare patches were maintained than in plots where they were not."
+        }
+      ],
+      "correct": "D",
+      "explanation": "Okonjo's proposal predicts that restoring the missing resource should restore the beetles. A population difference tracking the presence of bare patches is exactly that prediction confirmed.",
+      "distractors": {
+        "A": "Equal beetle numbers would undercut the proposal, and plant diversity is beside the point.",
+        "B": "A decline everywhere suggests the bare patches are not what limits the population.",
+        "C": "This would weaken the proposal by showing the beetles do not require bare soil to lay eggs."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "command-evidence-quant-e-073",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Command of Evidence (Quantitative)",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "A biologist recorded the average nightly foraging distance of red foxes in three habitat types: urban, 1.2 kilometers; suburban, 2.8 kilometers; and rural, 4.6 kilometers. She concluded that foraging distance decreases as habitat density increases.",
+      "prompt": "Which choice most effectively uses data from the text to support the biologist's conclusion?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Rural foxes foraged 4.6 kilometers on average, the greatest distance among the three groups."
+        },
+        {
+          "id": "B",
+          "text": "Suburban foxes foraged an average of 2.8 kilometers each night."
+        },
+        {
+          "id": "C",
+          "text": "All three groups foraged more than 1 kilometer per night."
+        },
+        {
+          "id": "D",
+          "text": "Urban foxes foraged the shortest distance, 1.2 kilometers, with distances rising through suburban, 2.8 kilometers, to rural, 4.6 kilometers."
+        }
+      ],
+      "correct": "D",
+      "explanation": "The conclusion describes a trend across all three habitat types, so the supporting evidence must trace the full progression from densest to least dense.",
+      "distractors": {
+        "A": "A single endpoint does not establish a trend.",
+        "B": "One middle value alone shows no direction of change.",
+        "C": "This is true of every group and therefore distinguishes nothing."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "command-evidence-quant-m-074",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Command of Evidence (Quantitative)",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "In a survey of 1,200 commuters, 34 percent reported walking to work, 28 percent driving, 26 percent taking public transit, and 12 percent cycling. The author of a report on the survey claims that walking is the most common mode but that no single mode dominates.",
+      "prompt": "Which choice most effectively uses data from the text to support the author's claim?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Walking, at 34 percent, was the most reported mode, yet it accounted for barely a third of commuters."
+        },
+        {
+          "id": "B",
+          "text": "Driving and public transit together accounted for 54 percent of commuters."
+        },
+        {
+          "id": "C",
+          "text": "Cycling, at 12 percent, was the least common mode reported."
+        },
+        {
+          "id": "D",
+          "text": "The survey collected responses from a total of 1,200 commuters."
+        }
+      ],
+      "correct": "A",
+      "explanation": "The claim has two halves, and this choice addresses both: walking leads the field, but its share is small enough that it does not dominate.",
+      "distractors": {
+        "B": "This combines two modes, which speaks to neither half of the claim about a single mode.",
+        "C": "The least common mode is irrelevant to which mode is most common.",
+        "D": "Sample size says nothing about the distribution across modes."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "command-evidence-quant-m-075",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Command of Evidence (Quantitative)",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "A researcher measured germination rates for four wildflower species at two soil temperatures. At 15 degrees Celsius: lupine 78 percent, poppy 41 percent, clarkia 66 percent, phacelia 52 percent. At 25 degrees Celsius: lupine 44 percent, poppy 79 percent, clarkia 61 percent, phacelia 55 percent. The researcher concluded that species differ in whether warming helps or harms their germination.",
+      "prompt": "Which choice most effectively uses data from the text to support the researcher's conclusion?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Clarkia and phacelia germinated at broadly similar rates at both temperatures."
+        },
+        {
+          "id": "B",
+          "text": "Lupine germination fell from 78 percent to 44 percent with warming, while poppy germination rose from 41 percent to 79 percent."
+        },
+        {
+          "id": "C",
+          "text": "At 25 degrees Celsius, poppy showed the highest germination rate of the four species."
+        },
+        {
+          "id": "D",
+          "text": "At 15 degrees Celsius, all four species germinated at rates above 40 percent."
+        }
+      ],
+      "correct": "B",
+      "explanation": "The conclusion is that warming has opposite effects on different species. A pair in which one species drops sharply and another rises sharply demonstrates exactly that opposition.",
+      "distractors": {
+        "A": "Species that barely change illustrate neither help nor harm.",
+        "C": "A ranking at one temperature says nothing about the effect of the temperature change.",
+        "D": "This describes a single condition and involves no comparison across temperatures."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "command-evidence-quant-h-076",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Command of Evidence (Quantitative)",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Between 2010 and 2020, a city library system tracked two measures. Physical visits fell from 2.1 million per year to 1.4 million, while digital checkouts rose from 90,000 per year to 1.3 million. A librarian argues that total library use grew over the decade even as in-person use declined.",
+      "prompt": "Which choice most effectively uses data from the text to support the librarian's argument?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Physical visits declined by 700,000 over the course of the decade."
+        },
+        {
+          "id": "B",
+          "text": "By 2020, digital checkouts had nearly caught up to the number of physical visits."
+        },
+        {
+          "id": "C",
+          "text": "The increase in digital checkouts, roughly 1.21 million, exceeded the decline in physical visits, 700,000."
+        },
+        {
+          "id": "D",
+          "text": "Digital checkouts grew by more than 1,000 percent over the decade."
+        }
+      ],
+      "correct": "C",
+      "explanation": "The argument is about the net change across both measures, so the evidence must compare the size of the gain against the size of the loss. Only this choice does the subtraction that establishes growth in the total.",
+      "distractors": {
+        "A": "This documents only the decline, which is the part of the argument already conceded.",
+        "B": "Comparing the two 2020 figures says nothing about the change in the total.",
+        "D": "A large percentage increase from a small base does not establish that the gain outweighed the loss in absolute terms."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "inferences-e-077",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Inferences",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "Emperor penguins survive the Antarctic winter by huddling in dense groups, and individuals within a huddle continually rotate from the exposed perimeter toward the warm interior. Because every bird eventually reaches the center, the arrangement ______",
+      "prompt": "Which choice most logically completes the text?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "benefits only the largest individuals in the group."
+        },
+        {
+          "id": "B",
+          "text": "requires the birds to remain motionless for long periods."
+        },
+        {
+          "id": "C",
+          "text": "prevents the birds from foraging at any point during the winter."
+        },
+        {
+          "id": "D",
+          "text": "spreads the cost of exposure across the whole colony."
+        }
+      ],
+      "correct": "D",
+      "explanation": "The key detail is that every bird eventually reaches the center, which means no individual bears the cold edge permanently. The logical conclusion is that the burden is shared.",
+      "distractors": {
+        "A": "Size is never mentioned, and universal rotation implies the opposite of selective benefit.",
+        "B": "Continual rotation requires movement, not stillness.",
+        "C": "Foraging is outside the scope of the text."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "inferences-m-078",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Inferences",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Kelp forests along the California coast collapsed after sea star wasting disease decimated sunflower sea stars, the principal predator of purple urchins. Released from predation, urchin populations exploded and grazed the kelp down to bare rock. Recent restoration efforts have concentrated not on replanting kelp but on ______",
+      "prompt": "Which choice most logically completes the text?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "reducing the incidence of wasting disease among unrelated marine species."
+        },
+        {
+          "id": "B",
+          "text": "rebuilding sea star populations that keep urchin numbers in check."
+        },
+        {
+          "id": "C",
+          "text": "transplanting purple urchins onto reefs that remain undamaged."
+        },
+        {
+          "id": "D",
+          "text": "measuring the rate at which sediment accumulates on bare rock."
+        }
+      ],
+      "correct": "B",
+      "explanation": "The passage traces the collapse to a missing predator rather than to a shortage of kelp. If restoration deliberately skips replanting, the logical target is the predator whose absence started the chain.",
+      "distractors": {
+        "A": "The text ties the problem to one specific predator, not to disease in unrelated species.",
+        "C": "Moving urchins to healthy reefs would spread the damage rather than repair it.",
+        "D": "Measurement is observation, not restoration, and does not address the cause described."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "inferences-m-079",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Inferences",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "For centuries the pigment ultramarine cost more than gold, since it was ground from lapis lazuli mined in a single region of what is now Afghanistan. Renaissance contracts frequently specified the exact weight of ultramarine a painter was to use, a stipulation rarely applied to other colors. This practice suggests that patrons ______",
+      "prompt": "Which choice most logically completes the text?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "were concerned that painters might economize on the most expensive material."
+        },
+        {
+          "id": "B",
+          "text": "preferred ultramarine to all other pigments for purely aesthetic reasons."
+        },
+        {
+          "id": "C",
+          "text": "distrusted the technical skill of the painters they commissioned."
+        },
+        {
+          "id": "D",
+          "text": "had direct access to the mines where lapis lazuli was extracted."
+        }
+      ],
+      "correct": "A",
+      "explanation": "The stipulation applied to one pigment in particular, and that pigment was the costliest. Specifying a weight guards against the painter using less than promised, which is a financial safeguard rather than an artistic one.",
+      "distractors": {
+        "B": "Aesthetic preference would not explain why the requirement was written as a weight, or why it singled out the most expensive color.",
+        "C": "The contracts govern quantity of material, which is a matter of expense rather than skill.",
+        "D": "Nothing in the text connects European patrons to the mines."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "inferences-h-080",
+      "section": "reading_writing",
+      "domain": "Information and Ideas",
+      "skill": "Inferences",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Linguists once assumed that a language's word order shifts only through sustained contact with neighboring languages. But Old English moved from a relatively flexible order toward the rigid subject-verb-object pattern of Modern English during centuries when its contact with other languages was comparatively limited. This case suggests that ______",
+      "prompt": "Which choice most logically completes the text?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "contact between languages has no effect on word order at all."
+        },
+        {
+          "id": "B",
+          "text": "speakers of Old English deliberately standardized their grammar."
+        },
+        {
+          "id": "C",
+          "text": "word order can change through processes internal to a single language."
+        },
+        {
+          "id": "D",
+          "text": "the word order of Modern English is more efficient than that of Old English."
+        }
+      ],
+      "correct": "C",
+      "explanation": "The counterexample shows a major word-order change occurring without much external contact, which refutes the word \"only\" in the original assumption. That leaves internal change as the available explanation.",
+      "distractors": {
+        "A": "Overcorrects; one counterexample shows contact is not necessary, not that it never matters.",
+        "B": "Deliberate standardization is a further claim the evidence does not reach.",
+        "D": "Efficiency is never discussed and does not follow from the change described."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "rhetorical-synthesis-e-081",
+      "section": "reading_writing",
+      "domain": "Expression of Ideas",
+      "skill": "Rhetorical Synthesis",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "While researching a topic, a student has taken the following notes:\n- Bioluminescence occurs in roughly 76 percent of deep-sea animals.\n- It is produced by a reaction between a molecule called luciferin and the enzyme luciferase.\n- Some species use it to attract prey.\n- Others use it to startle approaching predators.\n- A few use it to signal to potential mates.",
+      "prompt": "The student wants to emphasize the variety of functions bioluminescence serves. Which choice most effectively uses relevant information from the notes to accomplish this goal?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Bioluminescence occurs in roughly 76 percent of deep-sea animals."
+        },
+        {
+          "id": "B",
+          "text": "Bioluminescence is produced by a reaction between luciferin and the enzyme luciferase."
+        },
+        {
+          "id": "C",
+          "text": "Deep-sea animals use bioluminescence for a range of purposes: attracting prey, startling predators, and signaling to potential mates."
+        },
+        {
+          "id": "D",
+          "text": "Some deep-sea species use bioluminescence to attract prey."
+        }
+      ],
+      "correct": "C",
+      "explanation": "The goal is variety of function, so the answer must gather multiple distinct uses into one statement. Only this choice does so.",
+      "distractors": {
+        "A": "Reports prevalence rather than function.",
+        "B": "Explains the chemical mechanism, not the purposes served.",
+        "D": "Names a single function, which cannot convey variety."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "rhetorical-synthesis-m-082",
+      "section": "reading_writing",
+      "domain": "Expression of Ideas",
+      "skill": "Rhetorical Synthesis",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "While researching a topic, a student has taken the following notes:\n- The Antikythera mechanism is a geared bronze device recovered from a Roman-era shipwreck in 1901.\n- It dates to roughly the second century BCE.\n- Imaging conducted in 2006 revealed at least 30 interlocking gears.\n- The gears model the motions of the sun and the moon.\n- No comparable geared device is known from the following thousand years.",
+      "prompt": "The student wants to emphasize the technological isolation of the device. Which choice most effectively uses relevant information from the notes to accomplish this goal?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "The Antikythera mechanism, recovered from a shipwreck in 1901, dates to roughly the second century BCE."
+        },
+        {
+          "id": "B",
+          "text": "Recovered from a Roman-era shipwreck, the Antikythera mechanism uses at least 30 interlocking gears to model the motions of the sun and moon, a level of gearing unmatched for the next thousand years."
+        },
+        {
+          "id": "C",
+          "text": "Imaging conducted in 2006 revealed that the Antikythera mechanism contains at least 30 interlocking gears."
+        },
+        {
+          "id": "D",
+          "text": "The Antikythera mechanism models the motions of the sun and the moon."
+        }
+      ],
+      "correct": "B",
+      "explanation": "Isolation requires a comparison to what came after, and only this choice pairs the device's sophistication with the thousand-year gap that follows it.",
+      "distractors": {
+        "A": "Gives dates without any point of comparison.",
+        "C": "Describes the gearing but omits the absence of successors.",
+        "D": "States a function and nothing about the device's uniqueness."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "rhetorical-synthesis-m-083",
+      "section": "reading_writing",
+      "domain": "Expression of Ideas",
+      "skill": "Rhetorical Synthesis",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "While researching a topic, a student has taken the following notes:\n- Wangari Maathai founded the Green Belt Movement in Kenya in 1977.\n- The movement paid rural women to plant tree seedlings.\n- More than 50 million trees have been planted through the movement.\n- Maathai received the Nobel Peace Prize in 2004.\n- The prize committee cited the connection between environmental work and peace.",
+      "prompt": "The student wants to introduce the movement and convey its scale to an audience unfamiliar with it. Which choice most effectively uses relevant information from the notes to accomplish this goal?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Wangari Maathai received the Nobel Peace Prize in 2004."
+        },
+        {
+          "id": "B",
+          "text": "The Nobel committee cited the connection between environmental work and peace."
+        },
+        {
+          "id": "C",
+          "text": "Maathai founded the Green Belt Movement in Kenya in 1977."
+        },
+        {
+          "id": "D",
+          "text": "The Green Belt Movement, founded by Wangari Maathai in Kenya in 1977, paid rural women to plant seedlings and has resulted in the planting of more than 50 million trees."
+        }
+      ],
+      "correct": "D",
+      "explanation": "The goal has two parts, introduction and scale. This choice identifies the movement, its founder, its date, and its method, and then supplies the 50 million figure that conveys magnitude.",
+      "distractors": {
+        "A": "Concerns recognition rather than the movement itself.",
+        "B": "Explains the prize committee's reasoning, which serves neither part of the goal.",
+        "C": "Introduces the movement but gives no sense of its scale."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "rhetorical-synthesis-h-084",
+      "section": "reading_writing",
+      "domain": "Expression of Ideas",
+      "skill": "Rhetorical Synthesis",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "While researching a topic, a student has taken the following notes:\n- Chemist Alice Ball developed an injectable form of chaulmoogra oil in 1915.\n- Chaulmoogra oil was then the only known treatment for Hansen's disease.\n- In its raw form the oil was too viscous to inject and too bitter to swallow.\n- Ball died at the age of 24, before publishing her method.\n- A colleague later published the technique under his own name.",
+      "prompt": "The student wants to explain why Ball's contribution went unrecognized for decades. Which choice most effectively uses relevant information from the notes to accomplish this goal?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Ball, who died at 24 before publishing her method for making chaulmoogra oil injectable, saw a colleague publish the technique under his own name."
+        },
+        {
+          "id": "B",
+          "text": "Chaulmoogra oil was the only known treatment for Hansen's disease, though in raw form it was too viscous to inject."
+        },
+        {
+          "id": "C",
+          "text": "In 1915, chemist Alice Ball developed an injectable form of chaulmoogra oil."
+        },
+        {
+          "id": "D",
+          "text": "Raw chaulmoogra oil was both too bitter to swallow and too viscous to be injected."
+        }
+      ],
+      "correct": "A",
+      "explanation": "Explaining the lack of recognition requires the two facts that broke the link between Ball and her work: she died before publishing, and someone else published it under his own name.",
+      "distractors": {
+        "B": "Establishes the medical context but not the question of credit.",
+        "C": "States the achievement without addressing why it was overlooked.",
+        "D": "Describes the problem Ball solved rather than what happened to her claim on the solution."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "rhetorical-synthesis-h-085",
+      "section": "reading_writing",
+      "domain": "Expression of Ideas",
+      "skill": "Rhetorical Synthesis",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "While researching a topic, a student has taken the following notes:\n- The Blue Marble photograph was taken in 1972 by the crew of Apollo 17.\n- It shows a fully illuminated Earth against black space.\n- It is among the most widely reproduced images in history.\n- Historians credit it with strengthening the environmental movement.\n- The first Earth Day had already been held in 1970.",
+      "prompt": "The student wants to qualify the claim that the photograph launched environmentalism. Which choice most effectively uses relevant information from the notes to accomplish this goal?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "The Blue Marble photograph, taken in 1972 by the crew of Apollo 17, shows a fully illuminated Earth against black space."
+        },
+        {
+          "id": "B",
+          "text": "Though the Blue Marble photograph of 1972 is credited with strengthening the environmental movement, the first Earth Day had already been held two years earlier."
+        },
+        {
+          "id": "C",
+          "text": "The Blue Marble is among the most widely reproduced photographs in history."
+        },
+        {
+          "id": "D",
+          "text": "Historians credit the Blue Marble photograph with strengthening the environmental movement."
+        }
+      ],
+      "correct": "B",
+      "explanation": "To qualify a claim is to grant part of it while limiting it. This choice concedes the photograph's influence and then uses the 1970 Earth Day to show the movement predated the image.",
+      "distractors": {
+        "A": "Describes the photograph without engaging the claim.",
+        "C": "Reinforces the image's reach rather than limiting the claim about its effect.",
+        "D": "States the claim in full without any qualification."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "transitions-e-086",
+      "section": "reading_writing",
+      "domain": "Expression of Ideas",
+      "skill": "Transitions",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "Most bird species build nests from twigs, grasses, and mud. ______ the edible-nest swiftlet constructs its nest almost entirely from hardened strands of its own saliva.",
+      "prompt": "Which choice completes the text with the most logical transition?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Therefore,"
+        },
+        {
+          "id": "B",
+          "text": "In addition,"
+        },
+        {
+          "id": "C",
+          "text": "By contrast,"
+        },
+        {
+          "id": "D",
+          "text": "For instance,"
+        }
+      ],
+      "correct": "C",
+      "explanation": "The swiftlet's nesting material differs sharply from what most birds use, so the sentences stand in opposition.",
+      "distractors": {
+        "A": "Signals a result, but the swiftlet's behavior does not follow from other birds' behavior.",
+        "B": "Signals accumulation, which obscures the contrast being drawn.",
+        "D": "Signals an example, but the swiftlet is presented as an exception rather than an illustration."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "transitions-m-087",
+      "section": "reading_writing",
+      "domain": "Expression of Ideas",
+      "skill": "Transitions",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Early attempts to cultivate vanilla outside Mexico failed because the orchid's natural pollinator, a species of Melipona bee, was absent. ______ in 1841 a twelve-year-old enslaved boy named Edmond Albius devised a method of hand-pollination that made cultivation possible worldwide.",
+      "prompt": "Which choice completes the text with the most logical transition?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Consequently,"
+        },
+        {
+          "id": "B",
+          "text": "However,"
+        },
+        {
+          "id": "C",
+          "text": "Similarly,"
+        },
+        {
+          "id": "D",
+          "text": "Likewise,"
+        }
+      ],
+      "correct": "B",
+      "explanation": "The first sentence describes failure and the second describes the breakthrough that overcame it, so the relationship is one of reversal.",
+      "distractors": {
+        "A": "Albius's method was not caused by the pollinator's absence in the sense of following logically from it.",
+        "C": "The two sentences describe opposite outcomes, not similar ones.",
+        "D": "Like \"Similarly,\" this signals resemblance where a contrast is needed."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "transitions-m-088",
+      "section": "reading_writing",
+      "domain": "Expression of Ideas",
+      "skill": "Transitions",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "The bridge's original cables were rated to carry loads far above anything its designers anticipated. ______ inspectors discovered significant corrosion within fifteen years of the bridge's completion.",
+      "prompt": "Which choice completes the text with the most logical transition?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Nevertheless,"
+        },
+        {
+          "id": "B",
+          "text": "Accordingly,"
+        },
+        {
+          "id": "C",
+          "text": "In other words,"
+        },
+        {
+          "id": "D",
+          "text": "Therefore,"
+        }
+      ],
+      "correct": "A",
+      "explanation": "Generous load ratings would lead a reader to expect durability, and the corrosion finding runs against that expectation. A concessive contrast is required.",
+      "distractors": {
+        "B": "Suggests the corrosion followed from the strong rating, which is not logical.",
+        "C": "Signals restatement, but the second sentence introduces new and opposing information.",
+        "D": "Like \"Accordingly,\" this asserts a causal link that does not exist."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "transitions-h-089",
+      "section": "reading_writing",
+      "domain": "Expression of Ideas",
+      "skill": "Transitions",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Kepler's laws describe planetary orbits with great precision but say nothing about why planets move as they do. Newton's law of universal gravitation supplied that explanation, and it did so without discarding Kepler's work. ______ Kepler's laws follow mathematically from Newton's.",
+      "prompt": "Which choice completes the text with the most logical transition?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Nevertheless,"
+        },
+        {
+          "id": "B",
+          "text": "Indeed,"
+        },
+        {
+          "id": "C",
+          "text": "In contrast,"
+        },
+        {
+          "id": "D",
+          "text": "Instead,"
+        }
+      ],
+      "correct": "B",
+      "explanation": "The final sentence strengthens the preceding claim that Newton did not discard Kepler by showing an even closer relationship: derivation. \"Indeed\" marks that intensification.",
+      "distractors": {
+        "A": "Signals contrast, but the final sentence confirms rather than complicates the previous one.",
+        "C": "Sets the sentences in opposition when they agree.",
+        "D": "Signals replacement of one idea by another, which reverses the passage's point."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "transitions-h-090",
+      "section": "reading_writing",
+      "domain": "Expression of Ideas",
+      "skill": "Transitions",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Standardized reading passages are typically selected for their neutrality. Test designers avoid topics likely to advantage students from particular backgrounds. ______ a passage about sailing may be entirely neutral in tone and still favor students who have spent time on boats.",
+      "prompt": "Which choice completes the text with the most logical transition?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Therefore,"
+        },
+        {
+          "id": "B",
+          "text": "Likewise,"
+        },
+        {
+          "id": "C",
+          "text": "Still,"
+        },
+        {
+          "id": "D",
+          "text": "In summary,"
+        }
+      ],
+      "correct": "C",
+      "explanation": "The third sentence concedes that the designers' precautions may not be sufficient, which complicates rather than extends the second sentence. \"Still\" marks that concessive turn.",
+      "distractors": {
+        "A": "Presents the limitation as a consequence of the designers' efforts, which inverts the logic.",
+        "B": "Signals agreement, but the sailing example identifies a gap in the approach.",
+        "D": "Signals a conclusion, and the sentence introduces a new complication instead."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "boundaries-e-091",
+      "section": "reading_writing",
+      "domain": "Standard English Conventions",
+      "skill": "Boundaries",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "The Sonoran Desert receives rain in two distinct ______ unusual pattern supports a greater diversity of plants than any other North American desert.",
+      "prompt": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "seasons this"
+        },
+        {
+          "id": "B",
+          "text": "seasons, this"
+        },
+        {
+          "id": "C",
+          "text": "seasons; this"
+        },
+        {
+          "id": "D",
+          "text": "season's, this"
+        }
+      ],
+      "correct": "C",
+      "explanation": "Both halves of the sentence are independent clauses, so joining them requires a semicolon, a period, or a comma with a coordinating conjunction.",
+      "distractors": {
+        "A": "Runs the two independent clauses together with no punctuation.",
+        "B": "Creates a comma splice by joining independent clauses with only a comma.",
+        "D": "Adds an unnecessary possessive apostrophe and still leaves a comma splice."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "boundaries-m-092",
+      "section": "reading_writing",
+      "domain": "Standard English Conventions",
+      "skill": "Boundaries",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "Ada Lovelace, whose notes on Charles Babbage's Analytical Engine included what is now regarded as the first published computer ______ in 1852 at the age of 36.",
+      "prompt": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "program died"
+        },
+        {
+          "id": "B",
+          "text": "program, died"
+        },
+        {
+          "id": "C",
+          "text": "program; died"
+        },
+        {
+          "id": "D",
+          "text": "program: died"
+        }
+      ],
+      "correct": "B",
+      "explanation": "The clause beginning with \"whose\" is nonessential and opens with a comma, so it must close with one before the main verb resumes.",
+      "distractors": {
+        "A": "Leaves the nonessential clause unclosed, so the punctuation is unpaired.",
+        "C": "A semicolon requires an independent clause on both sides, and \"died in 1852\" has no subject of its own.",
+        "D": "A colon must follow an independent clause, which the interrupted subject does not supply."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "boundaries-m-093",
+      "section": "reading_writing",
+      "domain": "Standard English Conventions",
+      "skill": "Boundaries",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "In the lowest occupation layer the archaeologists recovered three ______ a bronze pin, a fragment of painted plaster, and a child's leather sandal.",
+      "prompt": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "artifacts"
+        },
+        {
+          "id": "B",
+          "text": "artifacts,"
+        },
+        {
+          "id": "C",
+          "text": "artifacts:"
+        },
+        {
+          "id": "D",
+          "text": "artifacts;"
+        }
+      ],
+      "correct": "C",
+      "explanation": "A complete clause precedes the list, and a colon is the standard mark for introducing a list in that position, especially when the list items themselves contain commas.",
+      "distractors": {
+        "A": "Provides no boundary between the clause and the list that specifies it.",
+        "B": "A comma is too weak here and blends into the commas separating the list items.",
+        "D": "A semicolon requires an independent clause after it, and the list is not one."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "boundaries-h-094",
+      "section": "reading_writing",
+      "domain": "Standard English Conventions",
+      "skill": "Boundaries",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Because the tissue samples had been stored ______ team could not determine whether the contamination occurred before or after collection.",
+      "prompt": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "improperly the"
+        },
+        {
+          "id": "B",
+          "text": "improperly, the"
+        },
+        {
+          "id": "C",
+          "text": "improperly; the"
+        },
+        {
+          "id": "D",
+          "text": "improperly: the"
+        }
+      ],
+      "correct": "B",
+      "explanation": "The sentence opens with a dependent clause introduced by \"Because.\" A dependent clause that precedes the main clause is set off with a comma.",
+      "distractors": {
+        "A": "Omits the comma required after an introductory dependent clause.",
+        "C": "A semicolon joins two independent clauses, and the \"Because\" clause is not independent.",
+        "D": "A colon must follow an independent clause."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "boundaries-h-095",
+      "section": "reading_writing",
+      "domain": "Standard English Conventions",
+      "skill": "Boundaries",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "The committee reviewed the funding proposal in ______ however, it did not issue a decision until the following November.",
+      "prompt": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "March,"
+        },
+        {
+          "id": "B",
+          "text": "March;"
+        },
+        {
+          "id": "C",
+          "text": "March"
+        },
+        {
+          "id": "D",
+          "text": "March:"
+        }
+      ],
+      "correct": "B",
+      "explanation": "\"However\" is a conjunctive adverb, not a coordinating conjunction, so it cannot join two independent clauses with only a comma. A semicolon before it is required.",
+      "distractors": {
+        "A": "Produces a comma splice, since \"however\" cannot do the work of a conjunction.",
+        "C": "Runs the two independent clauses together with no punctuation at all.",
+        "D": "A colon signals that an explanation or list follows, which does not fit a contrast."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "form-structure-sense-e-096",
+      "section": "reading_writing",
+      "domain": "Standard English Conventions",
+      "skill": "Form, Structure, and Sense",
+      "difficulty": "easy",
+      "format": "mcq",
+      "stimulus": "The collection of fossils housed at the university ______ specimens from six continents.",
+      "prompt": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "have included"
+        },
+        {
+          "id": "B",
+          "text": "include"
+        },
+        {
+          "id": "C",
+          "text": "includes"
+        },
+        {
+          "id": "D",
+          "text": "are including"
+        }
+      ],
+      "correct": "C",
+      "explanation": "The subject is \"collection,\" which is singular. The prepositional phrase \"of fossils\" does not change the number of the subject, so the verb must be singular.",
+      "distractors": {
+        "A": "Uses a plural auxiliary that does not agree with the singular subject.",
+        "B": "Agrees with \"fossils\" rather than with the actual subject.",
+        "D": "Uses a plural auxiliary and an unnecessary progressive form."
+      },
+      "estimated_seconds": 45,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "form-structure-sense-m-097",
+      "section": "reading_writing",
+      "domain": "Standard English Conventions",
+      "skill": "Form, Structure, and Sense",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "By the time the survey was published in 1998, the wetland it described ______ for nearly a decade.",
+      "prompt": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "shrinks"
+        },
+        {
+          "id": "B",
+          "text": "is shrinking"
+        },
+        {
+          "id": "C",
+          "text": "had been shrinking"
+        },
+        {
+          "id": "D",
+          "text": "will have been shrinking"
+        }
+      ],
+      "correct": "C",
+      "explanation": "The shrinking began before and continued up to a specified point in the past, 1998. The past perfect progressive expresses an ongoing action completed relative to another past event.",
+      "distractors": {
+        "A": "The simple present conflicts with the past-tense frame established by \"was published.\"",
+        "B": "The present progressive places the action in the present rather than before 1998.",
+        "D": "The future perfect progressive points forward from now, not backward from 1998."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "form-structure-sense-m-098",
+      "section": "reading_writing",
+      "domain": "Standard English Conventions",
+      "skill": "Form, Structure, and Sense",
+      "difficulty": "medium",
+      "format": "mcq",
+      "stimulus": "The museum announced that ______ extending its hours through the summer to accommodate the new exhibition.",
+      "prompt": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "their"
+        },
+        {
+          "id": "B",
+          "text": "its'"
+        },
+        {
+          "id": "C",
+          "text": "it's"
+        },
+        {
+          "id": "D",
+          "text": "its"
+        }
+      ],
+      "correct": "C",
+      "explanation": "The clause needs a subject and a verb, and \"it's\" supplies the contraction of \"it is,\" which pairs with the participle \"extending.\"",
+      "distractors": {
+        "A": "A plural pronoun does not agree with the singular \"museum,\" and it leaves the clause without a verb.",
+        "B": "This form does not exist in Standard English.",
+        "D": "The possessive \"its\" leaves the clause with no verb."
+      },
+      "estimated_seconds": 75,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "form-structure-sense-h-099",
+      "section": "reading_writing",
+      "domain": "Standard English Conventions",
+      "skill": "Form, Structure, and Sense",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "Having spent four decades collecting plants across Mexico and South America, ______",
+      "prompt": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "more than 100,000 specimens were gathered by botanist Ynes Mexia."
+        },
+        {
+          "id": "B",
+          "text": "it was botanist Ynes Mexia who gathered more than 100,000 specimens."
+        },
+        {
+          "id": "C",
+          "text": "botanist Ynes Mexia gathered more than 100,000 specimens."
+        },
+        {
+          "id": "D",
+          "text": "the gathering of more than 100,000 specimens occupied botanist Ynes Mexia."
+        }
+      ],
+      "correct": "C",
+      "explanation": "An introductory participial phrase must modify the subject of the main clause. Only this choice places Mexia, the person who spent the four decades, in the subject position.",
+      "distractors": {
+        "A": "The subject is \"specimens,\" which cannot spend decades collecting plants.",
+        "B": "The grammatical subject is the placeholder \"it,\" leaving the modifier dangling.",
+        "D": "The subject is \"the gathering,\" an activity rather than the person who performed it."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    },
+    {
+      "id": "form-structure-sense-h-100",
+      "section": "reading_writing",
+      "domain": "Standard English Conventions",
+      "skill": "Form, Structure, and Sense",
+      "difficulty": "hard",
+      "format": "mcq",
+      "stimulus": "The rise in average global temperatures, along with changes in seasonal precipitation patterns, ______ the ranges of many insect species northward.",
+      "prompt": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        {
+          "id": "A",
+          "text": "shift"
+        },
+        {
+          "id": "B",
+          "text": "are shifting"
+        },
+        {
+          "id": "C",
+          "text": "have shifted"
+        },
+        {
+          "id": "D",
+          "text": "has shifted"
+        }
+      ],
+      "correct": "D",
+      "explanation": "The subject is the singular noun \"rise.\" A phrase introduced by \"along with\" is parenthetical and does not make a singular subject plural, so the verb stays singular.",
+      "distractors": {
+        "A": "Treats the subject as plural.",
+        "B": "Uses a plural auxiliary that does not agree with \"rise.\"",
+        "C": "Uses the plural auxiliary \"have\" where \"has\" is required."
+      },
+      "estimated_seconds": 110,
+      "source": "synthetic-v1"
+    }
+  ]
+}
