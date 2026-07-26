@@ -1,0 +1,17 @@
+{
+  "study_goal": 15,
+  "target_score": 490,
+  "sat_date": "2026-09-06",
+  "default_practice_subject": "SATSam recommendation",
+  "default_start_difficulty": "Foundation",
+  "default_practice_count": 5,
+  "auto_explain": false,
+  "show_timing": false,
+  "ai_enabled": false,
+  "ai_host": "",
+  "ai_model": "",
+  "ai_temperature": 0.0,
+  "explanation_style": "Concise and strategic",
+  "coach_personality": "Warm and focused",
+  "ai_hints": false
+}

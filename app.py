@@ -3,7 +3,10 @@ import json
 import os
 import random
 import time
+import urllib.error
+import urllib.request
 from datetime import date, datetime, timedelta
+import streamlit.components.v1 as components
 
 import streamlit as st
 
@@ -90,6 +93,119 @@ START_DIFFICULTY = {
     "Challenging": "hard",
     "Test-level": "hard",
 }
+
+
+# ============================================================
+# SETTINGS PERSISTENCE
+#
+# Preferences are saved to satsam-settings.json next to this
+# file so they survive an app restart. Progress (answer
+# history) intentionally stays in the session only.
+# ============================================================
+
+PERSISTED_KEYS = [
+    "study_goal",
+    "target_score",
+    "sat_date",
+    "default_practice_subject",
+    "default_start_difficulty",
+    "default_practice_count",
+    "auto_explain",
+    "show_timing",
+    "ai_enabled",
+    "ai_host",
+    "ai_model",
+    "ai_temperature",
+    "explanation_style",
+    "coach_personality",
+    "ai_hints",
+]
+
+
+def settings_path():
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(here, "satsam-settings.json")
+    except NameError:
+        return "satsam-settings.json"
+
+
+def load_settings():
+    try:
+        with open(settings_path(), "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    if isinstance(data.get("sat_date"), str):
+        try:
+            data["sat_date"] = date.fromisoformat(data["sat_date"])
+        except ValueError:
+            data.pop("sat_date", None)
+    return {k: v for k, v in data.items() if k in PERSISTED_KEYS}
+
+
+def save_settings():
+    data = {}
+    for key in PERSISTED_KEYS:
+        value = st.session_state.get(key)
+        if isinstance(value, date):
+            value = value.isoformat()
+        data[key] = value
+    with open(settings_path(), "w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2)
+
+
+# ============================================================
+# AI TUTOR (LOCAL OLLAMA MODEL)
+#
+# These helpers configure and probe a local model. The actual
+# generation call is added alongside the Ollama integration;
+# the settings below feed straight into it.
+# ============================================================
+
+COACH_STYLE_GUIDANCE = {
+    "Concise and strategic": "Explain in two or three tight sentences focused on the fastest reliable path to the answer.",
+    "Step-by-step": "Walk through the solution one clear, numbered step at a time.",
+    "Socratic questions": "Guide with leading questions that help the student reach the answer themselves before confirming it.",
+    "Detailed tutor mode": "Give a thorough explanation covering the underlying concept, the full solution, and one common trap.",
+}
+
+COACH_PERSONALITY_GUIDANCE = {
+    "Warm and focused": "Be encouraging and supportive while staying on task.",
+    "Direct and challenging": "Be blunt and push the student to think harder; skip the padding.",
+    "Calm and encouraging": "Be patient, reassuring, and low-pressure.",
+}
+
+
+def build_coach_system_prompt():
+    """Compose the system prompt sent to the local model, built from the
+    explanation-style and coach-personality settings."""
+    style = COACH_STYLE_GUIDANCE.get(
+        st.session_state.get("explanation_style"),
+        next(iter(COACH_STYLE_GUIDANCE.values())),
+    )
+    personality = COACH_PERSONALITY_GUIDANCE.get(
+        st.session_state.get("coach_personality"),
+        next(iter(COACH_PERSONALITY_GUIDANCE.values())),
+    )
+    return (
+        "You are Sam, a supportive SAT coach helping a student improve. "
+        f"{personality} {style} "
+        "Keep every explanation accurate and specific to the question at hand."
+    )
+
+
+def ollama_reachable(host, timeout=3):
+    """Ping a local Ollama server's /api/tags endpoint.
+    Returns (ok, models_list) on success or (False, error_message)."""
+    url = host.rstrip("/") + "/api/tags"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        models = [m.get("name", "") for m in payload.get("models", [])]
+        return True, [m for m in models if m]
+    except Exception as error:  # surface any failure to the user
+        return False, str(error)
 
 
 def subject_filter(question, subject) -> bool:
@@ -315,13 +431,44 @@ DEFAULT_STATE = {
     "questions_mastered": 0,
     "streak": 0,
 
+    # Session defaults (pre-fill the Practice setup).
+    "default_practice_subject": "SATSam recommendation",
+    "default_start_difficulty": "Standard",
+    "default_practice_count": 12,
+    "auto_explain": True,
+    "show_timing": True,
+
+    # AI tutor (local Ollama model) — consumed by the AI integration.
+    "ai_enabled": False,
+    "ai_host": "http://localhost:11434",
+    "ai_model": "llama3.1",
+    "ai_temperature": 0.7,
+    "explanation_style": "Concise and strategic",
+    "coach_personality": "Warm and focused",
+    "ai_hints": True,
+
     # Misc.
     "pomodoro_running": False,
 }
 
+saved_settings = load_settings()
 for key, value in DEFAULT_STATE.items():
+    if key in saved_settings:
+        value = saved_settings[key]
     if key not in st.session_state:
         st.session_state[key] = value
+
+# Pre-fill the Practice setup widgets from the saved session defaults. These
+# apply on each fresh launch; per-session changes made in Practice still stick.
+for widget_key, default_value in {
+    "practice_subject": st.session_state.default_practice_subject,
+    "practice_focus": "Highest-impact weakness",
+    "practice_difficulty": st.session_state.default_start_difficulty,
+    "practice_questions": st.session_state.default_practice_count,
+    "practice_explanations": st.session_state.auto_explain,
+}.items():
+    if widget_key not in st.session_state:
+        st.session_state[widget_key] = default_value
 
 # Navigation requested by a button on the previous run. This has to
 # be applied *before* the sidebar radio is created, because Streamlit
@@ -362,13 +509,18 @@ def finalize_session():
     st.session_state.practice_phase = "summary"
 
 
-DEFAULT_QUICK_SESSION = {
-    "subject": "Balanced",
-    "focus": "Highest-impact weakness",
-    "start_difficulty": "medium",
-    "count": 10,
-    "explain": True,
-}
+def quick_session_config():
+    """A one-tap session that uses the user's saved defaults but always
+    targets their weakest skills."""
+    return {
+        "subject": st.session_state.default_practice_subject,
+        "focus": "Highest-impact weakness",
+        "start_difficulty": START_DIFFICULTY.get(
+            st.session_state.default_start_difficulty, "medium"
+        ),
+        "count": st.session_state.default_practice_count,
+        "explain": st.session_state.auto_explain,
+    }
 
 
 # Refresh derived metrics for this run now that history is available.
@@ -1142,7 +1294,7 @@ with st.sidebar:
         type="primary",
         use_container_width=True,
     ):
-        start_session(dict(DEFAULT_QUICK_SESSION))
+        start_session(quick_session_config())
         go_to("Practice")
 
 
@@ -1294,7 +1446,7 @@ if page == "Home":
                 type="primary",
                 use_container_width=True,
             ):
-                start_session(dict(DEFAULT_QUICK_SESSION))
+                start_session(quick_session_config())
                 go_to("Practice")
 
     with main_right:
@@ -1499,7 +1651,6 @@ elif page == "Practice":
                             "Challenging",
                             "Test-level",
                         ],
-                        value="Standard",
                         key="practice_difficulty",
                     )
 
@@ -1507,14 +1658,12 @@ elif page == "Practice":
                         "Questions",
                         min_value=5,
                         max_value=30,
-                        value=12,
                         step=1,
                         key="practice_questions",
                     )
 
                     st.toggle(
                         "Explain each answer immediately",
-                        value=True,
                         key="practice_explanations",
                     )
 
@@ -1814,7 +1963,7 @@ elif page == "Practice":
                     )
 
                     est = question.get("estimated_seconds")
-                    if est:
+                    if est and st.session_state.show_timing:
                         st.markdown("**Suggested time**")
                         st.caption(f"About {est} seconds for this question")
 
@@ -2222,51 +2371,730 @@ elif page == "Focus Timer":
         "Use a quiet timer for practice, review, or full modules.",
     )
 
-    timer_col, intention_col = st.columns([1.2, 0.8], gap="large")
+    timer_col, intention_col = st.columns([1.25, 0.75], gap="large")
 
     with timer_col:
         with st.container(border=True):
+            render_html(
+                """
+                <div class="card-title">Focus session</div>
+                <div class="card-subtitle">
+                    Stay with one clear task until the timer ends
+                </div>
+                """
+            )
+
             timer_length = st.slider(
                 "Session length",
-                min_value=15,
+                min_value=5,
                 max_value=60,
                 value=25,
                 step=5,
                 key="timer_length",
             )
 
-            render_html(
-                f"""
-                <div class="progress-ring-card">
-                    <div class="progress-ring" style="--progress: 0%;">
-                        <div class="progress-ring-content">
-                            <div class="progress-ring-value">{timer_length}:00</div>
-                            <div class="progress-ring-label">focus session</div>
+            timer_seconds = timer_length * 60
+
+            timer_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+
+                <style>
+                    * {{
+                        box-sizing: border-box;
+                    }}
+
+                    body {{
+                        margin: 0;
+                        padding: 0;
+                        background: transparent;
+                        font-family: Arial, sans-serif;
+                        color: #28241F;
+                    }}
+
+                    .timer-shell {{
+                        width: 100%;
+                        padding: 22px 18px 10px 18px;
+                        text-align: center;
+                    }}
+
+                    .timer-ring {{
+                        width: 230px;
+                        height: 230px;
+                        margin: 0 auto;
+                        position: relative;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }}
+
+                    .timer-ring svg {{
+                        position: absolute;
+                        width: 230px;
+                        height: 230px;
+                        transform: rotate(-90deg);
+                    }}
+
+                    .timer-ring circle {{
+                        fill: none;
+                        stroke-width: 10;
+                    }}
+
+                    .ring-background {{
+                        stroke: #E9DFD4;
+                    }}
+
+                    .ring-progress {{
+                        stroke: #C9694A;
+                        stroke-linecap: round;
+                        transition: stroke-dashoffset 0.3s linear;
+                    }}
+
+                    .timer-content {{
+                        position: relative;
+                        z-index: 2;
+                    }}
+
+                    .time-display {{
+                        font-family: Georgia, serif;
+                        font-size: 48px;
+                        font-weight: 600;
+                        letter-spacing: -1px;
+                        color: #28241F;
+                    }}
+
+                    .timer-status {{
+                        margin-top: 7px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: #746D63;
+                    }}
+
+                    .button-row {{
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr;
+                        gap: 10px;
+                        max-width: 520px;
+                        margin: 24px auto 0 auto;
+                    }}
+
+                    button {{
+                        min-height: 44px;
+                        border-radius: 12px;
+                        border: 1px solid #E6DDD1;
+                        font-size: 13px;
+                        font-weight: 700;
+                        cursor: pointer;
+                        transition:
+                            transform 0.15s ease,
+                            background 0.15s ease;
+                    }}
+
+                    button:hover {{
+                        transform: translateY(-1px);
+                    }}
+
+                    .start-button {{
+                        color: white;
+                        background: #C9694A;
+                        border-color: #C9694A;
+                    }}
+
+                    .start-button:hover {{
+                        background: #A95036;
+                    }}
+
+                    .pause-button,
+                    .reset-button {{
+                        color: #28241F;
+                        background: #FFFDF8;
+                    }}
+
+                    .pause-button:hover,
+                    .reset-button:hover {{
+                        background: #F7EFE6;
+                    }}
+
+                    .session-message {{
+                        min-height: 22px;
+                        margin-top: 18px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: #6F856F;
+                    }}
+
+                    .tip {{
+                        max-width: 520px;
+                        margin: 16px auto 0 auto;
+                        padding: 13px 15px;
+                        border-radius: 12px;
+                        background: #F5E7BC;
+                        color: #705D34;
+                        font-size: 12px;
+                        line-height: 1.5;
+                        text-align: left;
+                    }}
+
+                    @media (max-width: 520px) {{
+                        .timer-ring,
+                        .timer-ring svg {{
+                            width: 190px;
+                            height: 190px;
+                        }}
+
+                        .time-display {{
+                            font-size: 40px;
+                        }}
+
+                        .button-row {{
+                            grid-template-columns: 1fr;
+                        }}
+                    }}
+                </style>
+            </head>
+
+            <body>
+                <div class="timer-shell">
+                    <div class="timer-ring">
+                        <svg viewBox="0 0 240 240">
+                            <circle
+                                class="ring-background"
+                                cx="120"
+                                cy="120"
+                                r="104"
+                            ></circle>
+
+                            <circle
+                                id="progressCircle"
+                                class="ring-progress"
+                                cx="120"
+                                cy="120"
+                                r="104"
+                            ></circle>
+                        </svg>
+
+                        <div class="timer-content">
+                            <div id="timeDisplay" class="time-display">
+                                {timer_length}:00
+                            </div>
+
+                            <div id="timerStatus" class="timer-status">
+                                Ready to focus
+                            </div>
                         </div>
                     </div>
+
+                    <div class="button-row">
+                        <button
+                            id="startButton"
+                            class="start-button"
+                            onclick="startTimer()"
+                        >
+                            Start
+                        </button>
+
+                        <button
+                            id="pauseButton"
+                            class="pause-button"
+                            onclick="pauseTimer()"
+                        >
+                            Pause
+                        </button>
+
+                        <button
+                            class="reset-button"
+                            onclick="resetTimer()"
+                        >
+                            Reset
+                        </button>
+                    </div>
+
+                    <div
+                        id="sessionMessage"
+                        class="session-message"
+                    ></div>
+
+                    <div class="tip">
+                        Keep only the materials needed for this session open.
+                        When the timer ends, take a short break before starting
+                        another focused block.
+                    </div>
                 </div>
-                """
+
+                                <script>
+                    const storageKey = "satsam_focus_timer_v2";
+                    const selectedDuration = {timer_seconds};
+
+                    const timeDisplay =
+                        document.getElementById("timeDisplay");
+
+                    const timerStatus =
+                        document.getElementById("timerStatus");
+
+                    const sessionMessage =
+                        document.getElementById("sessionMessage");
+
+                    const startButton =
+                        document.getElementById("startButton");
+
+                    const progressCircle =
+                        document.getElementById("progressCircle");
+
+                    const radius = 104;
+                    const circumference = 2 * Math.PI * radius;
+
+                    progressCircle.style.strokeDasharray =
+                        circumference;
+
+                    let timerInterval = null;
+
+                    let timerState = {{
+                        duration: selectedDuration,
+                        remaining: selectedDuration,
+                        running: false,
+                        completed: false,
+                        endTime: null
+                    }};
+
+
+                    // -------------------------------------------------
+                    // LOCAL STORAGE
+                    // -------------------------------------------------
+
+                    function saveState() {{
+                        localStorage.setItem(
+                            storageKey,
+                            JSON.stringify(timerState)
+                        );
+                    }}
+
+
+                    function loadState() {{
+                        const savedState =
+                            localStorage.getItem(storageKey);
+
+                        if (!savedState) {{
+                            saveState();
+                            return;
+                        }}
+
+                        try {{
+                            const parsedState =
+                                JSON.parse(savedState);
+
+                            timerState = {{
+                                duration:
+                                    Number(parsedState.duration)
+                                    || selectedDuration,
+
+                                remaining:
+                                    Number(parsedState.remaining)
+                                    || selectedDuration,
+
+                                running:
+                                    Boolean(parsedState.running),
+
+                                completed:
+                                    Boolean(parsedState.completed),
+
+                                endTime:
+                                    parsedState.endTime
+                                    ? Number(parsedState.endTime)
+                                    : null
+                            }};
+
+                            /*
+                            If no session is active and the user changes
+                            the Streamlit duration slider, use the newly
+                            selected duration.
+                            */
+                            if (
+                                !timerState.running
+                                && !timerState.completed
+                                && timerState.remaining
+                                    === timerState.duration
+                                && timerState.duration
+                                    !== selectedDuration
+                            ) {{
+                                timerState.duration =
+                                    selectedDuration;
+
+                                timerState.remaining =
+                                    selectedDuration;
+
+                                timerState.endTime = null;
+
+                                saveState();
+                            }}
+
+                        }} catch (error) {{
+                            console.log(
+                                "Could not restore timer state.",
+                                error
+                            );
+
+                            timerState = {{
+                                duration: selectedDuration,
+                                remaining: selectedDuration,
+                                running: false,
+                                completed: false,
+                                endTime: null
+                            }};
+
+                            saveState();
+                        }}
+                    }}
+
+
+                    // -------------------------------------------------
+                    // TIME CALCULATIONS
+                    // -------------------------------------------------
+
+                    function calculateRemainingTime() {{
+                        if (
+                            timerState.running
+                            && timerState.endTime
+                        ) {{
+                            timerState.remaining = Math.max(
+                                0,
+                                Math.ceil(
+                                    (
+                                        timerState.endTime
+                                        - Date.now()
+                                    ) / 1000
+                                )
+                            );
+                        }}
+
+                        return timerState.remaining;
+                    }}
+
+
+                    function formatTime(totalSeconds) {{
+                        const safeSeconds =
+                            Math.max(0, totalSeconds);
+
+                        const minutes =
+                            Math.floor(safeSeconds / 60);
+
+                        const seconds =
+                            safeSeconds % 60;
+
+                        return (
+                            String(minutes).padStart(2, "0")
+                            + ":"
+                            + String(seconds).padStart(2, "0")
+                        );
+                    }}
+
+
+                    // -------------------------------------------------
+                    // DISPLAY
+                    // -------------------------------------------------
+
+                    function updateDisplay() {{
+                        const remaining =
+                            calculateRemainingTime();
+
+                        timeDisplay.textContent =
+                            formatTime(remaining);
+
+                        const duration =
+                            Math.max(timerState.duration, 1);
+
+                        const elapsed =
+                            duration - remaining;
+
+                        const progress =
+                            Math.min(
+                                Math.max(elapsed / duration, 0),
+                                1
+                            );
+
+                        progressCircle.style.strokeDashoffset =
+                            circumference * progress;
+
+                        if (timerState.completed) {{
+                            timerStatus.textContent =
+                                "Session complete";
+
+                            sessionMessage.textContent =
+                                "Excellent work. Take a short, "
+                                + "intentional break.";
+
+                            startButton.textContent =
+                                "Complete";
+
+                        }} else if (timerState.running) {{
+                            timerStatus.textContent =
+                                "Focus in progress";
+
+                            sessionMessage.textContent = "";
+
+                            startButton.textContent =
+                                "Running";
+
+                        }} else if (
+                            timerState.remaining
+                            < timerState.duration
+                        ) {{
+                            timerStatus.textContent =
+                                "Session paused";
+
+                            sessionMessage.textContent = "";
+
+                            startButton.textContent =
+                                "Resume";
+
+                        }} else {{
+                            timerStatus.textContent =
+                                "Ready to focus";
+
+                            sessionMessage.textContent = "";
+
+                            startButton.textContent =
+                                "Start";
+                        }}
+                    }}
+
+
+                    // -------------------------------------------------
+                    // TIMER CONTROLS
+                    // -------------------------------------------------
+
+                    function startTimer() {{
+                        if (
+                            timerState.running
+                            || timerState.completed
+                            || timerState.remaining <= 0
+                        ) {{
+                            return;
+                        }}
+
+                        timerState.running = true;
+
+                        timerState.endTime =
+                            Date.now()
+                            + timerState.remaining * 1000;
+
+                        saveState();
+                        updateDisplay();
+                        beginInterval();
+                    }}
+
+
+                    function pauseTimer() {{
+                        if (!timerState.running) {{
+                            return;
+                        }}
+
+                        calculateRemainingTime();
+
+                        timerState.running = false;
+                        timerState.endTime = null;
+
+                        clearTimerInterval();
+                        saveState();
+                        updateDisplay();
+                    }}
+
+
+                    function resetTimer() {{
+                        clearTimerInterval();
+
+                        timerState = {{
+                            duration: selectedDuration,
+                            remaining: selectedDuration,
+                            running: false,
+                            completed: false,
+                            endTime: null
+                        }};
+
+                        saveState();
+                        updateDisplay();
+                    }}
+
+
+                    function completeTimer(
+                        playSound = true
+                    ) {{
+                        clearTimerInterval();
+
+                        timerState.remaining = 0;
+                        timerState.running = false;
+                        timerState.completed = true;
+                        timerState.endTime = null;
+
+                        saveState();
+                        updateDisplay();
+
+                        if (playSound) {{
+                            playCompletionSound();
+                        }}
+                    }}
+
+
+                    // -------------------------------------------------
+                    // INTERVAL MANAGEMENT
+                    // -------------------------------------------------
+
+                    function clearTimerInterval() {{
+                        if (timerInterval !== null) {{
+                            clearInterval(timerInterval);
+                            timerInterval = null;
+                        }}
+                    }}
+
+
+                    function beginInterval() {{
+                        clearTimerInterval();
+
+                        timerInterval = setInterval(() => {{
+                            const remaining =
+                                calculateRemainingTime();
+
+                            if (remaining <= 0) {{
+                                completeTimer(true);
+                                return;
+                            }}
+
+                            /*
+                            Save periodically so the paused value is
+                            always accurate if the iframe disappears.
+                            */
+                            saveState();
+                            updateDisplay();
+
+                        }}, 250);
+                    }}
+
+
+                    // -------------------------------------------------
+                    // COMPLETION SOUND
+                    // -------------------------------------------------
+
+                    function playCompletionSound() {{
+                        try {{
+                            const AudioContextClass =
+                                window.AudioContext
+                                || window.webkitAudioContext;
+
+                            const audioContext =
+                                new AudioContextClass();
+
+                            const oscillator =
+                                audioContext.createOscillator();
+
+                            const gainNode =
+                                audioContext.createGain();
+
+                            oscillator.connect(gainNode);
+                            gainNode.connect(
+                                audioContext.destination
+                            );
+
+                            oscillator.frequency.value = 660;
+                            oscillator.type = "sine";
+
+                            gainNode.gain.setValueAtTime(
+                                0.14,
+                                audioContext.currentTime
+                            );
+
+                            gainNode.gain
+                                .exponentialRampToValueAtTime(
+                                    0.001,
+                                    audioContext.currentTime + 1.2
+                                );
+
+                            oscillator.start();
+
+                            oscillator.stop(
+                                audioContext.currentTime + 1.2
+                            );
+
+                        }} catch (error) {{
+                            console.log(
+                                "Completion sound unavailable.",
+                                error
+                            );
+                        }}
+                    }}
+
+
+                    // -------------------------------------------------
+                    // RESTORE THE TIMER WHEN PAGE REOPENS
+                    // -------------------------------------------------
+
+                    loadState();
+
+                    if (
+                        timerState.running
+                        && timerState.endTime
+                    ) {{
+                        calculateRemainingTime();
+
+                        /*
+                        The timer may have finished while the user was
+                        on another SATSam page.
+                        */
+                        if (timerState.remaining <= 0) {{
+                            completeTimer(false);
+                        }} else {{
+                            saveState();
+                            updateDisplay();
+                            beginInterval();
+                        }}
+                    }} else {{
+                        updateDisplay();
+                    }}
+
+
+                    /*
+                    Keep the saved time accurate if the browser tab is
+                    hidden or restored.
+                    */
+                    document.addEventListener(
+                        "visibilitychange",
+                        () => {{
+                            if (
+                                document.visibilityState === "visible"
+                            ) {{
+                                if (
+                                    timerState.running
+                                    && timerState.endTime
+                                ) {{
+                                    calculateRemainingTime();
+
+                                    if (
+                                        timerState.remaining <= 0
+                                    ) {{
+                                        completeTimer(false);
+                                    }} else {{
+                                        updateDisplay();
+                                        beginInterval();
+                                    }}
+                                }}
+                            }}
+                        }}
+                    );
+                </script>
+            </body>
+            </html>
+            """
+
+            components.html(
+                timer_html,
+                height=430,
+                scrolling=False,
             )
-
-            timer_buttons = st.columns(2)
-
-            with timer_buttons[0]:
-                if st.button(
-                    "Start focus session",
-                    type="primary",
-                    use_container_width=True,
-                ):
-                    st.session_state.pomodoro_running = True
-                    st.success(f"{timer_length}-minute session started.")
-
-            with timer_buttons[1]:
-                if st.button("Reset", use_container_width=True):
-                    st.session_state.pomodoro_running = False
 
             st.caption(
-                "The demonstration timer can later be connected to Streamlit "
-                "fragments or JavaScript for live countdowns."
-            )
+    "The timer continues while you use other SATSam pages. "
+    "Press Reset before changing the duration of an active session."
+)
 
     with intention_col:
         with st.container(border=True):
@@ -2274,40 +3102,74 @@ elif page == "Focus Timer":
                 """
                 <div class="card-title">Set an intention</div>
                 <div class="card-subtitle">
-                    Define what success looks like before beginning
+                    Decide exactly what you will accomplish
                 </div>
                 """
             )
 
-            st.selectbox(
+            focus_activity = st.selectbox(
                 "Focus activity",
                 [
                     "Adaptive practice",
                     "Mistake review",
                     "Concept lesson",
                     "Timed module",
+                    "Reading practice",
+                    "Math practice",
                 ],
                 key="focus_activity",
             )
 
-            st.text_area(
+            session_intention = st.text_area(
                 "Session intention",
                 placeholder=(
-                    "Example: Solve slowly enough to verify each "
-                    "substitution step."
+                    "Example: I will carefully verify every "
+                    "substitution step before selecting an answer."
                 ),
-                height=125,
+                height=135,
                 key="session_intention",
             )
 
-            render_html(
-                """
-                <div class="coach-quote">
-                    A focused twenty-five minutes is more valuable than an
-                    unfocused hour.
-                </div>
-                """
+            distraction_mode = st.toggle(
+                "Distraction-free reminder",
+                value=True,
+                key="distraction_mode",
             )
+
+            if distraction_mode:
+                render_html(
+                    """
+                    <div class="ai-insight">
+                        <div class="ai-insight-label">
+                            Before you begin
+                        </div>
+                        <h3>Prepare your environment.</h3>
+                        <p>
+                            Silence notifications, close unrelated tabs,
+                            place your phone out of reach, and keep water
+                            nearby.
+                        </p>
+                    </div>
+                    """
+                )
+
+            if session_intention.strip():
+                render_html(
+                    f"""
+                    <div class="coach-quote">
+                        Your commitment: {session_intention}
+                    </div>
+                    """
+                )
+            else:
+                render_html(
+                    """
+                    <div class="coach-quote">
+                        A clear intention makes it easier to notice when
+                        your attention begins to drift.
+                    </div>
+                    """
+                )
 
 
 # ============================================================
@@ -2318,22 +3180,26 @@ elif page == "Settings":
     section_header(
         "Preferences",
         "Make SATSam feel like your study space",
-        "Adjust your targets, session rhythm, and feedback style.",
+        "These settings save to a local file and drive how sessions and the "
+        "AI tutor behave.",
     )
 
     settings_left, settings_right = st.columns(2, gap="large")
 
+    # ---------------- Session defaults ----------------
     with settings_left:
         with st.container(border=True):
             render_html(
                 """
-                <div class="card-title">Study preferences</div>
-                <div class="card-subtitle">Control how sessions are structured</div>
+                <div class="card-title">Targets &amp; session defaults</div>
+                <div class="card-subtitle">
+                    Pre-fill every new practice session and set your score goal
+                </div>
                 """
             )
 
             st.slider(
-                "Daily study goal",
+                "Daily study goal (minutes)",
                 min_value=15,
                 max_value=120,
                 step=5,
@@ -2348,33 +3214,77 @@ elif page == "Settings":
                 key="target_score",
             )
 
-            st.slider(
-                "Default focus session",
-                min_value=15,
-                max_value=60,
-                value=25,
-                step=5,
-                key="default_focus_length",
-            )
-
             st.selectbox(
-                "Default practice mode",
+                "Default subject",
                 [
                     "SATSam recommendation",
                     "Balanced",
                     "Math",
                     "Reading and Writing",
                 ],
-                key="default_practice_mode",
+                key="default_practice_subject",
             )
 
+            st.selectbox(
+                "Default starting difficulty",
+                ["Foundation", "Standard", "Challenging", "Test-level"],
+                key="default_start_difficulty",
+            )
+
+            st.slider(
+                "Default questions per session",
+                min_value=5,
+                max_value=30,
+                step=1,
+                key="default_practice_count",
+            )
+
+            st.toggle(
+                "Explain each answer immediately",
+                key="auto_explain",
+            )
+
+            st.toggle(
+                "Show timing guidance during practice",
+                key="show_timing",
+            )
+
+    # ---------------- AI tutor ----------------
     with settings_right:
         with st.container(border=True):
             render_html(
                 """
-                <div class="card-title">Coaching preferences</div>
-                <div class="card-subtitle">Choose how Sam communicates feedback</div>
+                <div class="card-title">AI tutor</div>
+                <div class="card-subtitle">
+                    Connect a local Ollama model for custom explanations
+                </div>
                 """
+            )
+
+            st.toggle(
+                "Enable the AI tutor",
+                key="ai_enabled",
+                help="Turn on once your local Ollama model is running.",
+            )
+
+            st.text_input(
+                "Ollama host",
+                key="ai_host",
+                placeholder="http://localhost:11434",
+            )
+
+            st.text_input(
+                "Model name",
+                key="ai_model",
+                placeholder="e.g. llama3.1",
+            )
+
+            st.slider(
+                "Response creativity (temperature)",
+                min_value=0.0,
+                max_value=1.0,
+                step=0.1,
+                key="ai_temperature",
             )
 
             st.selectbox(
@@ -2398,13 +3308,66 @@ elif page == "Settings":
                 key="coach_personality",
             )
 
-            st.toggle("Show hints before explanations", value=True, key="show_hints")
-            st.toggle("Include timing feedback", value=True, key="timing_feedback")
-            st.toggle("Send daily study reminder", value=False, key="daily_reminder")
+            st.toggle(
+                "Offer AI hints before revealing the answer",
+                key="ai_hints",
+            )
 
-    st.write("")
+            if st.button("Test connection", use_container_width=True):
+                reachable, detail = ollama_reachable(st.session_state.ai_host)
+                if reachable and detail:
+                    st.success("Connected. Models available: " + ", ".join(detail))
+                elif reachable:
+                    st.warning("Connected, but no models are installed yet.")
+                else:
+                    st.error(f"Could not reach Ollama: {detail}")
 
-    reset_col, save_col = st.columns([1, 1])
+    # ---------------- Prompt preview ----------------
+    with st.container(border=True):
+        render_html(
+            """
+            <div class="card-title">How Sam will sound</div>
+            <div class="card-subtitle">
+                The instructions sent to your local model, built from the two
+                settings above
+            </div>
+            """
+        )
+        render_html(
+            f'<div class="stimulus-box">{to_html_block(build_coach_system_prompt())}</div>'
+        )
+
+    # ---------------- Data & progress ----------------
+    section_header(
+        "Your data",
+        "Everything stays on your machine",
+        "Export a copy of your progress or clear it to start fresh.",
+    )
+
+    export_col, reset_col, save_col = st.columns(3)
+
+    with export_col:
+        progress_json = json.dumps(
+            {
+                "history": [
+                    {**entry, "ts": entry["ts"].isoformat()}
+                    for entry in st.session_state.history
+                ],
+                "score_history": st.session_state.score_history,
+                "sessions_completed": st.session_state.sessions_completed,
+                "best_streak": st.session_state.best_streak,
+            },
+            indent=2,
+        )
+        st.download_button(
+            "Export progress",
+            data=progress_json,
+            file_name="satsam-progress.json",
+            mime="application/json",
+            use_container_width=True,
+            disabled=not st.session_state.history,
+        )
+
     with reset_col:
         if st.button("Reset my progress", use_container_width=True):
             st.session_state.history = []
@@ -2414,6 +3377,11 @@ elif page == "Settings":
             st.session_state.practice_phase = "setup"
             recompute_metrics()
             st.success("Your progress has been cleared.")
+
     with save_col:
         if st.button("Save preferences", type="primary", use_container_width=True):
-            st.success("Your SATSam preferences have been saved.")
+            try:
+                save_settings()
+                st.success("Preferences saved to satsam-settings.json.")
+            except OSError as error:
+                st.warning(f"Could not write settings file: {error}")
