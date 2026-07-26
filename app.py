@@ -1,5 +1,11 @@
+import html as html_lib
+import json
+import os
+import random
+import time
+from datetime import date, datetime, timedelta
+
 import streamlit as st
-from datetime import date, datetime
 
 
 # ============================================================
@@ -15,12 +21,11 @@ st.set_page_config(
 
 
 # ============================================================
-# HTML HELPER
+# HTML HELPERS
 #
 # Streamlit renders markdown first, HTML second. Any line that
 # starts with four or more spaces becomes a fenced code block,
-# and a blank line ends the raw-HTML block. That is what caused
-# the stray <div> text and dark code boxes. Flattening every
+# and a blank line ends the raw-HTML block. Flattening every
 # markup string to a single line removes both triggers.
 # ============================================================
 
@@ -34,6 +39,231 @@ def flatten_html(markup: str) -> str:
 
 def render_html(markup: str) -> None:
     st.markdown(flatten_html(markup), unsafe_allow_html=True)
+
+
+def esc(text) -> str:
+    """Escape text for safe embedding inside raw HTML."""
+    return html_lib.escape(str(text))
+
+
+def to_html_block(text) -> str:
+    """Escape and convert newlines to <br> so blocks survive flatten_html."""
+    return esc(text).replace("\n", "<br>")
+
+
+# ============================================================
+# QUESTION BANK
+#
+# Loaded once from sat-questions.json, which must sit next to
+# this file. Falls back to the working directory if needed.
+# ============================================================
+
+@st.cache_data(show_spinner=False)
+def load_question_bank():
+    candidates = []
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        candidates.append(os.path.join(here, "sat-questions.json"))
+    except NameError:
+        pass
+    candidates.append("sat-questions.json")
+
+    for path in candidates:
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            return data.get("questions", [])
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+    return []
+
+
+QUESTIONS = load_question_bank()
+
+DIFFICULTY_ORDER = ["easy", "medium", "hard"]
+
+# Maps the four-step "Starting difficulty" slider onto the three
+# difficulty tiers that actually exist in the question bank.
+START_DIFFICULTY = {
+    "Foundation": "easy",
+    "Standard": "medium",
+    "Challenging": "hard",
+    "Test-level": "hard",
+}
+
+
+def subject_filter(question, subject) -> bool:
+    if subject == "Math":
+        return question["section"] == "math"
+    if subject == "Reading and Writing":
+        return question["section"] == "reading_writing"
+    # "Balanced" and "SATSam recommendation" draw from everything.
+    return True
+
+
+def _focus_linear_equations(question) -> bool:
+    skill = question["skill"].lower()
+    return "linear equation" in skill or skill == "linear functions"
+
+
+FOCUS_MATCHERS = {
+    "Linear equations": _focus_linear_equations,
+    "Problem solving and data": lambda q: q["domain"] == "Problem-Solving and Data Analysis",
+    "Reading inference": lambda q: q["skill"] == "Inferences",
+    "Grammar conventions": lambda q: q["domain"] == "Standard English Conventions",
+}
+
+
+def focus_filter(question, focus) -> bool:
+    if focus == "Highest-impact weakness":
+        return True
+    matcher = FOCUS_MATCHERS.get(focus)
+    return matcher(question) if matcher else True
+
+
+def _candidate_pool(config, used_ids):
+    return [
+        q for q in QUESTIONS
+        if q["id"] not in used_ids
+        and subject_filter(q, config["subject"])
+        and focus_filter(q, config["focus"])
+    ]
+
+
+def pick_next(config, used_ids, difficulty):
+    """Choose the next question, preferring the target difficulty and,
+    in weakness mode, the skills where accuracy is currently lowest."""
+    pool = _candidate_pool(config, used_ids)
+    if not pool:
+        return None
+
+    preferred = set()
+    if config["focus"] == "Highest-impact weakness":
+        preferred = set(weakest_skills(st.session_state.history)[:3])
+
+    order = [difficulty] + [d for d in DIFFICULTY_ORDER if d != difficulty]
+    for level in order:
+        matches = [q for q in pool if q["difficulty"] == level]
+        if not matches:
+            continue
+        if preferred:
+            focused = [q for q in matches if q["skill"] in preferred]
+            if focused:
+                return random.choice(focused)
+        return random.choice(matches)
+
+    return random.choice(pool)
+
+
+def shift_difficulty(difficulty, went_up):
+    index = DIFFICULTY_ORDER.index(difficulty)
+    index = min(index + 1, 2) if went_up else max(index - 1, 0)
+    return DIFFICULTY_ORDER[index]
+
+
+def spr_match(user_answer, correct) -> bool:
+    text = (user_answer or "").strip()
+    if not text:
+        return False
+    if text == str(correct).strip():
+        return True
+    try:
+        return abs(float(text) - float(correct)) < 1e-6
+    except ValueError:
+        return False
+
+
+def check_answer(question, user_answer) -> bool:
+    if question["format"] == "mcq":
+        return user_answer == question["correct"]
+    return spr_match(user_answer, question["correct"])
+
+
+# ============================================================
+# METRICS DERIVED FROM ANSWER HISTORY
+#
+# Every dashboard number below is computed from the running
+# history of answered questions, so the home page, insights,
+# and sidebar all reflect real performance.
+# ============================================================
+
+def skill_stats(history):
+    stats = {}
+    for entry in history:
+        record = stats.setdefault(
+            entry["skill"],
+            {"n": 0, "c": 0, "section": entry["section"], "domain": entry["domain"]},
+        )
+        record["n"] += 1
+        record["c"] += 1 if entry["correct"] else 0
+    for record in stats.values():
+        record["acc"] = round(record["c"] / record["n"] * 100) if record["n"] else 0
+    return stats
+
+
+def weakest_skills(history):
+    stats = skill_stats(history)
+    ranked = sorted(stats.items(), key=lambda kv: (kv[1]["acc"], -kv[1]["n"]))
+    return [skill for skill, _ in ranked]
+
+
+def _section_scaled(history, section):
+    entries = [e for e in history if e["section"] == section]
+    if not entries:
+        return None
+    accuracy_fraction = sum(1 for e in entries if e["correct"]) / len(entries)
+    # Each SAT section runs 200-800 in ten-point increments.
+    return int(round((200 + accuracy_fraction * 600) / 10) * 10)
+
+
+def predicted_score(history):
+    if not history:
+        return 0
+    math_score = _section_scaled(history, "math")
+    rw_score = _section_scaled(history, "reading_writing")
+    if math_score is None and rw_score is None:
+        return 0
+    # If a section has no data yet, assume it mirrors the other.
+    if math_score is None:
+        math_score = rw_score
+    if rw_score is None:
+        rw_score = math_score
+    return math_score + rw_score
+
+
+def compute_streak(history):
+    days = {entry["ts"].date() for entry in history}
+    if not days:
+        return 0
+    today = date.today()
+    cursor = today if today in days else max(days)
+    streak = 0
+    while cursor in days:
+        streak += 1
+        cursor -= timedelta(days=1)
+    return streak
+
+
+def recompute_metrics():
+    history = st.session_state.history
+    today = date.today()
+
+    solved = len(history)
+    correct = sum(1 for e in history if e["correct"])
+    total_seconds = sum(e["seconds"] for e in history)
+    today_seconds = sum(e["seconds"] for e in history if e["ts"].date() == today)
+
+    st.session_state.questions_solved = solved
+    st.session_state.correct_answers = correct
+    st.session_state.study_minutes = int(round(total_seconds / 60))
+    st.session_state.today_minutes = int(round(today_seconds / 60))
+    st.session_state.questions_mastered = correct
+    st.session_state.predicted_score = predicted_score(history)
+    st.session_state.streak = compute_streak(history)
+    st.session_state.best_streak = max(
+        st.session_state.get("best_streak", 0),
+        st.session_state.streak,
+    )
 
 
 # ============================================================
@@ -50,19 +280,43 @@ PAGES = [
 ]
 
 DEFAULT_STATE = {
-    "questions_solved": 124,
-    "correct_answers": 101,
-    "study_minutes": 315,
-    "predicted_score": 1410,
+    # User-set targets (some are bound to widgets).
     "study_goal": 45,
-    "today_minutes": 28,
-    "streak": 5,
     "target_score": 1500,
     "sat_date": date(2026, 9, 6),
-    "pomodoro_running": False,
-    "practice_started": False,
-    "answer_submitted": False,
     "page": "Home",
+
+    # Practice session state.
+    "practice_phase": "setup",          # setup | question | summary | empty
+    "answer_submitted": False,
+    "current_q": None,
+    "current_difficulty": "medium",
+    "session_config": None,
+    "session_used_ids": set(),
+    "session_answered": 0,
+    "session_correct": 0,
+    "session_seconds": 0.0,
+    "session_last_answer": None,
+    "session_last_correct": None,
+    "question_start": 0.0,
+
+    # Persistent progress log.
+    "history": [],
+    "score_history": [],
+    "sessions_completed": 0,
+    "best_streak": 0,
+
+    # Derived metrics (refreshed every run by recompute_metrics).
+    "questions_solved": 0,
+    "correct_answers": 0,
+    "study_minutes": 0,
+    "today_minutes": 0,
+    "predicted_score": 0,
+    "questions_mastered": 0,
+    "streak": 0,
+
+    # Misc.
+    "pomodoro_running": False,
 }
 
 for key, value in DEFAULT_STATE.items():
@@ -81,6 +335,46 @@ def go_to(page_name: str) -> None:
     st.rerun()
 
 
+def start_session(config):
+    """Build a fresh adaptive practice session from a config dict."""
+    st.session_state.session_config = config
+    st.session_state.session_used_ids = set()
+    st.session_state.session_answered = 0
+    st.session_state.session_correct = 0
+    st.session_state.session_seconds = 0.0
+    st.session_state.current_difficulty = config["start_difficulty"]
+    st.session_state.answer_submitted = False
+    st.session_state.session_last_answer = None
+    st.session_state.session_last_correct = None
+
+    question = pick_next(config, st.session_state.session_used_ids,
+                         config["start_difficulty"])
+    st.session_state.current_q = question
+    st.session_state.question_start = time.time()
+    st.session_state.practice_phase = "question" if question else "empty"
+
+
+def finalize_session():
+    st.session_state.score_history.append(
+        predicted_score(st.session_state.history)
+    )
+    st.session_state.sessions_completed += 1
+    st.session_state.practice_phase = "summary"
+
+
+DEFAULT_QUICK_SESSION = {
+    "subject": "Balanced",
+    "focus": "Highest-impact weakness",
+    "start_difficulty": "medium",
+    "count": 10,
+    "explain": True,
+}
+
+
+# Refresh derived metrics for this run now that history is available.
+recompute_metrics()
+
+
 # ============================================================
 # HELPERS
 # ============================================================
@@ -90,7 +384,6 @@ def days_until_sat() -> int:
 
 
 def format_sat_date() -> str:
-    # %-d / %#d are platform specific, so build the day number manually.
     d = st.session_state.sat_date
     return f"{d.strftime('%B')} {d.day}, {d.year}"
 
@@ -103,7 +396,6 @@ def prep_window_percent(window_days: int = 180) -> int:
 def accuracy() -> int:
     if st.session_state.questions_solved == 0:
         return 0
-
     return round(
         st.session_state.correct_answers
         / st.session_state.questions_solved
@@ -113,7 +405,6 @@ def accuracy() -> int:
 
 def greeting() -> str:
     hour = datetime.now().hour
-
     if hour < 12:
         return "Good morning"
     elif hour < 18:
@@ -122,16 +413,35 @@ def greeting() -> str:
         return "Good evening"
 
 
+def status_for_accuracy(value):
+    if value >= 80:
+        return "Strong"
+    if value >= 65:
+        return "Developing"
+    return "Needs work"
+
+
+def relative_time(ts):
+    seconds = (datetime.now() - ts).total_seconds()
+    if seconds < 60:
+        return "just now"
+    if seconds < 3600:
+        return f"{int(seconds // 60)} min ago"
+    if seconds < 86400:
+        return f"{int(seconds // 3600)} h ago"
+    return f"{int(seconds // 86400)} d ago"
+
+
 def metric_card(label, value, detail, icon):
     render_html(
         f"""
         <div class="metric-card">
             <div class="metric-top">
                 <span class="metric-icon">{icon}</span>
-                <span class="metric-label">{label}</span>
+                <span class="metric-label">{esc(label)}</span>
             </div>
-            <div class="metric-value">{value}</div>
-            <div class="metric-detail">{detail}</div>
+            <div class="metric-value">{esc(value)}</div>
+            <div class="metric-detail">{esc(detail)}</div>
         </div>
         """
     )
@@ -141,9 +451,9 @@ def section_header(eyebrow, title, description=""):
     render_html(
         f"""
         <div class="section-heading">
-            <div class="eyebrow">{eyebrow}</div>
-            <h2>{title}</h2>
-            <p>{description}</p>
+            <div class="eyebrow">{esc(eyebrow)}</div>
+            <h2>{esc(title)}</h2>
+            <p>{esc(description)}</p>
         </div>
         """
     )
@@ -152,14 +462,13 @@ def section_header(eyebrow, title, description=""):
 def topic_row(topic, accuracy_value, status):
     status_class = status.lower().replace(" ", "-")
     width = max(0, min(accuracy_value, 100))
-
     render_html(
         f"""
         <div class="topic-row">
             <div class="topic-row-top">
                 <div>
-                    <div class="topic-name">{topic}</div>
-                    <div class="topic-status {status_class}">{status}</div>
+                    <div class="topic-name">{esc(topic)}</div>
+                    <div class="topic-status {status_class}">{esc(status)}</div>
                 </div>
                 <div class="topic-score">{accuracy_value}%</div>
             </div>
@@ -168,6 +477,12 @@ def topic_row(topic, accuracy_value, status):
             </div>
         </div>
         """
+    )
+
+
+def empty_state(message):
+    render_html(
+        f'<p style="color: var(--muted); font-size: 0.85rem; margin: 0.5rem 0;">{esc(message)}</p>'
     )
 
 
@@ -604,6 +919,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     margin-top: 0.32rem;
     box-shadow: 0 0 0 4px var(--sage-soft);
 }
+.activity-dot.miss { background: var(--terracotta); box-shadow: 0 0 0 4px var(--terracotta-soft); }
 .activity-title { color: var(--ink); font-size: 0.8rem; font-weight: 700; }
 .activity-detail { color: var(--muted); font-size: 0.69rem; margin-top: 0.15rem; }
 
@@ -648,6 +964,37 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     font-size: 1.2rem;
     margin-bottom: 1rem;
 }
+.stimulus-box {
+    padding: 1rem 1.1rem;
+    background: var(--paper-muted);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    color: var(--ink);
+    font-size: 0.97rem;
+    line-height: 1.55;
+    margin: 0.2rem 0 1rem 0;
+}
+.review-choice {
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    margin-bottom: 0.45rem;
+    font-size: 0.9rem;
+    color: var(--ink);
+    background: var(--paper);
+}
+.review-choice.correct {
+    border-color: #8CAE8C;
+    background: #EAF1E7;
+    color: #3F553F;
+    font-weight: 700;
+}
+.review-choice.wrong {
+    border-color: #D9A08C;
+    background: #F7E7DF;
+    color: #9A4B33;
+}
+.review-choice .tag { float: right; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; }
 
 /* ----- STUDY PLAN DAYS ----- */
 .day-card {
@@ -783,7 +1130,7 @@ with st.sidebar:
         <div class="sidebar-card">
             <div class="sidebar-card-label">Current streak</div>
             <div class="sidebar-card-value">{st.session_state.streak} focused days</div>
-            <div class="sidebar-card-detail">Your best streak is 12 days</div>
+            <div class="sidebar-card-detail">Your best streak is {st.session_state.best_streak} days</div>
         </div>
         """
     )
@@ -795,8 +1142,7 @@ with st.sidebar:
         type="primary",
         use_container_width=True,
     ):
-        st.session_state.practice_started = True
-        st.session_state.answer_submitted = False
+        start_session(dict(DEFAULT_QUICK_SESSION))
         go_to("Practice")
 
 
@@ -805,9 +1151,15 @@ with st.sidebar:
 # ============================================================
 
 if page == "Home":
+    history = st.session_state.history
+    has_data = len(history) > 0
+
     goal = max(st.session_state.study_goal, 1)
     progress_fraction = min(st.session_state.today_minutes / goal, 1.0)
     progress_percent = round(progress_fraction * 100)
+
+    weak = weakest_skills(history)
+    focus_label = weak[0] if weak else "Balanced practice"
 
     render_html(
         f"""
@@ -822,20 +1174,32 @@ if page == "Home":
                 <div class="hero-chips">
                     <div class="hero-chip">{days_until_sat()} days until test day</div>
                     <div class="hero-chip">Target: {st.session_state.target_score}</div>
-                    <div class="hero-chip">Focus: Linear equations</div>
+                    <div class="hero-chip">Focus: {esc(focus_label)}</div>
                 </div>
             </div>
         </div>
         """
     )
 
+    # ----- Predicted-score delta detail -----
+    score_log = st.session_state.score_history
+    if len(score_log) >= 2:
+        delta = score_log[-1] - score_log[0]
+        pred_detail = f"{'+' if delta >= 0 else ''}{delta} points so far"
+    elif has_data:
+        pred_detail = "First estimate from your answers"
+    else:
+        pred_detail = "Answer questions to estimate"
+
+    num_skills = len(skill_stats(history))
+
     metric_columns = st.columns(4)
 
     with metric_columns[0]:
         metric_card(
             "Predicted score",
-            st.session_state.predicted_score,
-            "+30 points this month",
+            st.session_state.predicted_score if has_data else "—",
+            pred_detail,
             "↗",
         )
 
@@ -852,15 +1216,15 @@ if page == "Home":
             "Study time",
             f"{st.session_state.study_minutes // 60}h "
             f"{st.session_state.study_minutes % 60}m",
-            "5 sessions this week",
+            f"{st.session_state.sessions_completed} sessions completed",
             "◷",
         )
 
     with metric_columns[3]:
         metric_card(
             "Questions mastered",
-            "18",
-            "4 new topics improving",
+            st.session_state.questions_mastered,
+            f"Across {num_skills} skill{'s' if num_skills != 1 else ''}",
             "◇",
         )
 
@@ -884,8 +1248,8 @@ if page == "Home":
                     <div class="plan-left">
                         <div class="plan-number">01</div>
                         <div>
-                            <div class="plan-name">Linear equations refresher</div>
-                            <div class="plan-description">Review two concepts before practicing</div>
+                            <div class="plan-name">Warm-up questions</div>
+                            <div class="plan-description">Two confidence-builders to start</div>
                         </div>
                     </div>
                     <div class="plan-time">8 min</div>
@@ -894,7 +1258,7 @@ if page == "Home":
                     <div class="plan-left">
                         <div class="plan-number">02</div>
                         <div>
-                            <div class="plan-name">Adaptive math set</div>
+                            <div class="plan-name">Adaptive practice set</div>
                             <div class="plan-description">Difficulty adjusts after every response</div>
                         </div>
                     </div>
@@ -904,8 +1268,8 @@ if page == "Home":
                     <div class="plan-left">
                         <div class="plan-number">03</div>
                         <div>
-                            <div class="plan-name">Reading inference drill</div>
-                            <div class="plan-description">Practice evidence-based reasoning</div>
+                            <div class="plan-name">Targeted weak-skill drill</div>
+                            <div class="plan-description">Focused on {esc(focus_label)}</div>
                         </div>
                     </div>
                     <div class="plan-time">12 min</div>
@@ -930,8 +1294,7 @@ if page == "Home":
                 type="primary",
                 use_container_width=True,
             ):
-                st.session_state.practice_started = True
-                st.session_state.answer_submitted = False
+                start_session(dict(DEFAULT_QUICK_SESSION))
                 go_to("Practice")
 
     with main_right:
@@ -959,21 +1322,36 @@ if page == "Home":
                 st.session_state.study_goal - st.session_state.today_minutes,
                 0,
             )
-
             st.caption(f"{remaining} focused minutes remaining today")
 
         st.write("")
 
+        if has_data:
+            insight_body = (
+                f"You have answered {st.session_state.questions_solved} "
+                f"question{'s' if st.session_state.questions_solved != 1 else ''} "
+                f"at {accuracy()}% accuracy. "
+                + (
+                    f"Your softest area right now is {focus_label} — today's drill leans there."
+                    if weak else
+                    "Keep going to reveal where your next points are hiding."
+                )
+            )
+            insight_head = "Here's where you stand."
+        else:
+            insight_body = (
+                "Answer a few practice questions and SATSam will start building "
+                "a picture of how you think — accuracy, pacing, and which skills "
+                "to prioritize."
+            )
+            insight_head = "Let's gather some signal."
+
         render_html(
-            """
+            f"""
             <div class="ai-insight">
                 <div class="ai-insight-label">Sam's observation</div>
-                <h3>You understand the method.</h3>
-                <p>
-                    Your recent algebra errors came from rushing the final
-                    substitution—not from misunderstanding the concept. Today's
-                    set will slow that specific step down.
-                </p>
+                <h3>{esc(insight_head)}</h3>
+                <p>{esc(insight_body)}</p>
             </div>
             """
         )
@@ -994,21 +1372,30 @@ if page == "Home":
 
     topic_col, activity_col = st.columns([1.2, 1], gap="large")
 
+    stats = skill_stats(history)
+
     with topic_col:
         with st.container(border=True):
             render_html(
                 """
                 <div class="card-title">Topic confidence</div>
                 <div class="card-subtitle">
-                    Estimated from accuracy, speed, and consistency
+                    Estimated from your accuracy on each skill
                 </div>
                 """
             )
 
-            topic_row("Linear equations", 61, "Needs work")
-            topic_row("Reading inference", 72, "Developing")
-            topic_row("Grammar conventions", 84, "Strong")
-            topic_row("Problem solving and data", 79, "Developing")
+            if stats:
+                top_skills = sorted(
+                    stats.items(), key=lambda kv: kv[1]["n"], reverse=True
+                )[:5]
+                for skill, record in top_skills:
+                    topic_row(skill, record["acc"], status_for_accuracy(record["acc"]))
+            else:
+                empty_state(
+                    "No skill data yet. Complete a practice session to see your "
+                    "topic confidence build here."
+                )
 
     with activity_col:
         with st.container(border=True):
@@ -1016,36 +1403,28 @@ if page == "Home":
                 """
                 <div class="card-title">Recent learning</div>
                 <div class="card-subtitle">The work behind your score growth</div>
-                <div class="activity-item">
-                    <div class="activity-dot"></div>
-                    <div>
-                        <div class="activity-title">Completed adaptive math set</div>
-                        <div class="activity-detail">16 of 20 correct · Yesterday</div>
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <div class="activity-dot"></div>
-                    <div>
-                        <div class="activity-title">Mastered punctuation boundaries</div>
-                        <div class="activity-detail">Confidence increased to 88% · Monday</div>
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <div class="activity-dot"></div>
-                    <div>
-                        <div class="activity-title">Reviewed four saved mistakes</div>
-                        <div class="activity-detail">Two misconception patterns resolved · Sunday</div>
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <div class="activity-dot"></div>
-                    <div>
-                        <div class="activity-title">Predicted score increased</div>
-                        <div class="activity-detail">1380 → 1410 · Last week</div>
-                    </div>
-                </div>
                 """
             )
+
+            if history:
+                for entry in reversed(history[-4:]):
+                    dot_class = "" if entry["correct"] else "miss"
+                    verdict = "Correct" if entry["correct"] else "Missed"
+                    render_html(
+                        f"""
+                        <div class="activity-item">
+                            <div class="activity-dot {dot_class}"></div>
+                            <div>
+                                <div class="activity-title">{esc(entry['skill'])}</div>
+                                <div class="activity-detail">
+                                    {verdict} · {esc(entry['difficulty'].title())} · {relative_time(entry['ts'])}
+                                </div>
+                            </div>
+                        </div>
+                        """
+                    )
+            else:
+                empty_state("Your answered questions will appear here as you practice.")
 
 
 # ============================================================
@@ -1053,14 +1432,6 @@ if page == "Home":
 # ============================================================
 
 elif page == "Practice":
-    ANSWER_OPTIONS = [
-        "A.  y = 2x + 3",
-        "B.  y = 3x + 1",
-        "C.  y = 3x − 1",
-        "D.  y = 4x − 1",
-    ]
-    CORRECT_ANSWER = ANSWER_OPTIONS[1]
-
     render_html(
         """
         <div class="practice-header">
@@ -1074,241 +1445,449 @@ elif page == "Practice":
         """
     )
 
-    if not st.session_state.practice_started:
-        setup_col, recommendation_col = st.columns([1.4, 1], gap="large")
-
-        with setup_col:
-            with st.container(border=True):
-                render_html(
-                    """
-                    <div class="card-title">Session setup</div>
-                    <div class="card-subtitle">
-                        Customize the challenge without overthinking it
-                    </div>
-                    """
-                )
-
-                st.selectbox(
-                    "Subject",
-                    [
-                        "SATSam recommendation",
-                        "Math",
-                        "Reading and Writing",
-                        "Balanced",
-                    ],
-                    key="practice_subject",
-                )
-
-                st.selectbox(
-                    "Primary focus",
-                    [
-                        "Highest-impact weakness",
-                        "Linear equations",
-                        "Problem solving and data",
-                        "Reading inference",
-                        "Grammar conventions",
-                    ],
-                    key="practice_focus",
-                )
-
-                st.select_slider(
-                    "Starting difficulty",
-                    options=[
-                        "Foundation",
-                        "Standard",
-                        "Challenging",
-                        "Test-level",
-                    ],
-                    value="Standard",
-                    key="practice_difficulty",
-                )
-
-                st.slider(
-                    "Questions",
-                    min_value=5,
-                    max_value=30,
-                    value=12,
-                    step=1,
-                    key="practice_questions",
-                )
-
-                st.toggle(
-                    "Explain each answer immediately",
-                    value=True,
-                    key="practice_explanations",
-                )
-
-                st.write("")
-
-                if st.button(
-                    "Create adaptive session →",
-                    type="primary",
-                    use_container_width=True,
-                ):
-                    st.session_state.practice_started = True
-                    st.session_state.answer_submitted = False
-                    st.rerun()
-
-        with recommendation_col:
-            render_html(
-                """
-                <div class="ai-insight">
-                    <div class="ai-insight-label">Recommended session</div>
-                    <h3>12 questions · Mixed math</h3>
-                    <p>
-                        Begin with two confidence-building questions, then target
-                        linear-equation accuracy under time pressure. Finish with
-                        one transfer question to verify mastery.
-                    </p>
-                </div>
-                """
-            )
-
-            with st.container(border=True):
-                render_html(
-                    """
-                    <div class="card-title">How adaptation works</div>
-                    <div class="card-subtitle">
-                        More than simply making questions harder
-                    </div>
-                    <div class="plan-item">
-                        <div class="plan-left">
-                            <div class="plan-number">A</div>
-                            <div>
-                                <div class="plan-name">Detect the misconception</div>
-                                <div class="plan-description">Sam interprets the reasoning behind errors</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="plan-item">
-                        <div class="plan-left">
-                            <div class="plan-number">B</div>
-                            <div>
-                                <div class="plan-name">Select the next question</div>
-                                <div class="plan-description">Difficulty and topic change in real time</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="plan-item">
-                        <div class="plan-left">
-                            <div class="plan-number">C</div>
-                            <div>
-                                <div class="plan-name">Explain the pattern</div>
-                                <div class="plan-description">Feedback teaches a reusable strategy</div>
-                            </div>
-                        </div>
-                    </div>
-                    """
-                )
-
+    if not QUESTIONS:
+        st.error(
+            "No questions are loaded. Make sure **sat-questions.json** sits in "
+            "the same folder as this app, then refresh."
+        )
     else:
-        question_col, context_col = st.columns([1.65, 0.85], gap="large")
+        phase = st.session_state.practice_phase
 
-        with question_col:
-            with st.container(border=True):
-                render_html(
-                    """
-                    <div class="question-number">Question 1 of 12 · Algebra</div>
-                    <div class="question-text">
-                        A line passes through the points (2, 7) and (6, 19).
-                        Which equation represents the line?
-                    </div>
-                    <div class="formula-box">
-                        Use the slope-intercept form: y = mx + b
-                    </div>
-                    """
-                )
+        # ---------------- SETUP ----------------
+        if phase == "setup":
+            setup_col, recommendation_col = st.columns([1.4, 1], gap="large")
 
-                def clear_feedback():
-                    st.session_state.answer_submitted = False
-
-                selected_answer = st.radio(
-                    "Select one answer",
-                    ANSWER_OPTIONS,
-                    index=None,
-                    key="selected_answer",
-                    on_change=clear_feedback,
-                )
-
-                button_col_1, button_col_2 = st.columns([1, 1])
-
-                with button_col_1:
-                    if st.button("Leave session", use_container_width=True):
-                        st.session_state.practice_started = False
-                        st.session_state.answer_submitted = False
-                        st.rerun()
-
-                with button_col_2:
-                    if st.button(
-                        "Submit answer →",
-                        type="primary",
-                        use_container_width=True,
-                        disabled=selected_answer is None,
-                    ):
-                        st.session_state.answer_submitted = True
-
-                if st.session_state.answer_submitted:
-                    if selected_answer == CORRECT_ANSWER:
-                        st.success(
-                            "Correct. You found both the slope and "
-                            "the y-intercept accurately."
-                        )
-                    else:
-                        st.error(
-                            "Not quite. Your slope may be correct, but check "
-                            "the substitution step used to find b."
-                        )
-
+            with setup_col:
+                with st.container(border=True):
                     render_html(
                         """
-                        <div class="ai-insight">
-                            <div class="ai-insight-label">Sam's explanation</div>
-                            <h3>Find the slope before the intercept.</h3>
-                            <p>
-                                The slope is (19 − 7) ÷ (6 − 2) = 3. Substitute
-                                (2, 7) into y = 3x + b: 7 = 6 + b, so b = 1.
-                                Therefore, the equation is y = 3x + 1.
-                            </p>
+                        <div class="card-title">Session setup</div>
+                        <div class="card-subtitle">
+                            Customize the challenge without overthinking it
                         </div>
                         """
                     )
 
-        with context_col:
-            with st.container(border=True):
+                    st.selectbox(
+                        "Subject",
+                        [
+                            "SATSam recommendation",
+                            "Math",
+                            "Reading and Writing",
+                            "Balanced",
+                        ],
+                        key="practice_subject",
+                    )
+
+                    st.selectbox(
+                        "Primary focus",
+                        [
+                            "Highest-impact weakness",
+                            "Linear equations",
+                            "Problem solving and data",
+                            "Reading inference",
+                            "Grammar conventions",
+                        ],
+                        key="practice_focus",
+                    )
+
+                    st.select_slider(
+                        "Starting difficulty",
+                        options=[
+                            "Foundation",
+                            "Standard",
+                            "Challenging",
+                            "Test-level",
+                        ],
+                        value="Standard",
+                        key="practice_difficulty",
+                    )
+
+                    st.slider(
+                        "Questions",
+                        min_value=5,
+                        max_value=30,
+                        value=12,
+                        step=1,
+                        key="practice_questions",
+                    )
+
+                    st.toggle(
+                        "Explain each answer immediately",
+                        value=True,
+                        key="practice_explanations",
+                    )
+
+                    st.write("")
+
+                    if st.button(
+                        "Create adaptive session →",
+                        type="primary",
+                        use_container_width=True,
+                    ):
+                        config = {
+                            "subject": st.session_state.practice_subject,
+                            "focus": st.session_state.practice_focus,
+                            "start_difficulty": START_DIFFICULTY.get(
+                                st.session_state.practice_difficulty, "medium"
+                            ),
+                            "count": st.session_state.practice_questions,
+                            "explain": st.session_state.practice_explanations,
+                        }
+                        start_session(config)
+                        st.rerun()
+
+            with recommendation_col:
                 render_html(
                     """
-                    <div class="card-title">Session pulse</div>
-                    <div class="card-subtitle">Live signals from your performance</div>
+                    <div class="ai-insight">
+                        <div class="ai-insight-label">How this works</div>
+                        <h3>Real questions, adaptive order</h3>
+                        <p>
+                            Every question is drawn from the practice bank. Answer
+                            correctly and the next one steps up in difficulty; miss
+                            it and SATSam eases back so you can rebuild the skill.
+                        </p>
+                    </div>
                     """
                 )
 
-                metric_card(
-                    "Current difficulty",
-                    "Standard",
-                    "Adjusts after submission",
-                    "◇",
-                )
+                with st.container(border=True):
+                    render_html(
+                        """
+                        <div class="card-title">How adaptation works</div>
+                        <div class="card-subtitle">
+                            More than simply making questions harder
+                        </div>
+                        <div class="plan-item">
+                            <div class="plan-left">
+                                <div class="plan-number">A</div>
+                                <div>
+                                    <div class="plan-name">Track each response</div>
+                                    <div class="plan-description">Right and wrong answers both inform the next pick</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="plan-item">
+                            <div class="plan-left">
+                                <div class="plan-number">B</div>
+                                <div>
+                                    <div class="plan-name">Adjust difficulty</div>
+                                    <div class="plan-description">Difficulty shifts up or down after every answer</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="plan-item">
+                            <div class="plan-left">
+                                <div class="plan-number">C</div>
+                                <div>
+                                    <div class="plan-name">Explain the pattern</div>
+                                    <div class="plan-description">Every answer comes with a full worked explanation</div>
+                                </div>
+                            </div>
+                        </div>
+                        """
+                    )
+
+        # ---------------- EMPTY (no match) ----------------
+        elif phase == "empty":
+            st.info(
+                "No questions matched those filters. Try a broader subject or a "
+                "different focus."
+            )
+            if st.button("Back to setup", type="primary"):
+                st.session_state.practice_phase = "setup"
+                st.rerun()
+
+        # ---------------- QUESTION ----------------
+        elif phase == "question":
+            question = st.session_state.current_q
+            config = st.session_state.session_config
+            count = config["count"]
+            answered = st.session_state.session_answered
+            submitted = st.session_state.answer_submitted
+
+            question_col, context_col = st.columns([1.65, 0.85], gap="large")
+
+            with question_col:
+                with st.container(border=True):
+                    # Before submitting, this is question (answered + 1). After
+                    # submitting, answered has been incremented to include it.
+                    display_number = answered + 1 if not submitted else answered
+                    render_html(
+                        f'<div class="question-number">Question {display_number} of {count} · '
+                        f'{esc(question["domain"])} · {esc(question["difficulty"].title())}</div>'
+                    )
+
+                    if question.get("stimulus"):
+                        render_html(
+                            f'<div class="stimulus-box">{to_html_block(question["stimulus"])}</div>'
+                        )
+
+                    render_html(
+                        f'<div class="question-text">{to_html_block(question["prompt"])}</div>'
+                    )
+
+                    is_mcq = question["format"] == "mcq"
+
+                    if not submitted:
+                        # ----- Input -----
+                        if is_mcq:
+                            choice_ids = [c["id"] for c in question["choices"]]
+                            choice_text = {c["id"]: c["text"] for c in question["choices"]}
+                            user_answer = st.radio(
+                                "Select one answer",
+                                choice_ids,
+                                index=None,
+                                format_func=lambda cid: f"{cid}.  {choice_text[cid]}",
+                                key=f"ans_{question['id']}",
+                            )
+                        else:
+                            st.caption("Student-produced response — type a numeric answer.")
+                            user_answer = st.text_input(
+                                "Your answer",
+                                key=f"spr_{question['id']}",
+                                placeholder="e.g. 5 or -4",
+                            )
+
+                        no_answer = user_answer is None or (
+                            isinstance(user_answer, str) and user_answer.strip() == ""
+                        )
+
+                        button_col_1, button_col_2 = st.columns([1, 1])
+
+                        with button_col_1:
+                            if st.button("Leave session", use_container_width=True):
+                                st.session_state.practice_phase = "setup"
+                                st.session_state.answer_submitted = False
+                                st.rerun()
+
+                        with button_col_2:
+                            if st.button(
+                                "Submit answer →",
+                                type="primary",
+                                use_container_width=True,
+                                disabled=no_answer,
+                            ):
+                                is_correct = check_answer(question, user_answer)
+                                elapsed = min(
+                                    time.time() - st.session_state.question_start, 600
+                                )
+                                st.session_state.history.append({
+                                    "id": question["id"],
+                                    "skill": question["skill"],
+                                    "domain": question["domain"],
+                                    "section": question["section"],
+                                    "difficulty": question["difficulty"],
+                                    "correct": is_correct,
+                                    "seconds": elapsed,
+                                    "est": question.get("estimated_seconds") or 0,
+                                    "ts": datetime.now(),
+                                })
+                                st.session_state.session_used_ids.add(question["id"])
+                                st.session_state.session_answered += 1
+                                st.session_state.session_correct += 1 if is_correct else 0
+                                st.session_state.session_seconds += elapsed
+                                st.session_state.current_difficulty = shift_difficulty(
+                                    st.session_state.current_difficulty, is_correct
+                                )
+                                st.session_state.session_last_answer = user_answer
+                                st.session_state.session_last_correct = is_correct
+                                st.session_state.answer_submitted = True
+                                st.rerun()
+
+                    else:
+                        # ----- Answer review -----
+                        last_answer = st.session_state.session_last_answer
+                        last_correct = st.session_state.session_last_correct
+
+                        if is_mcq:
+                            review_html = ""
+                            for choice in question["choices"]:
+                                css = ""
+                                tag = ""
+                                if choice["id"] == question["correct"]:
+                                    css, tag = "correct", "Correct"
+                                elif choice["id"] == last_answer:
+                                    css, tag = "wrong", "Your answer"
+                                review_html += (
+                                    f'<div class="review-choice {css}">'
+                                    f'{esc(choice["id"])}.  {esc(choice["text"])}'
+                                    f'<span class="tag">{tag}</span></div>'
+                                )
+                            render_html(review_html)
+                        else:
+                            your_css = "correct" if last_correct else "wrong"
+                            render_html(
+                                f'<div class="review-choice {your_css}">Your answer: '
+                                f'{esc(last_answer)}<span class="tag">You</span></div>'
+                                f'<div class="review-choice correct">Correct answer: '
+                                f'{esc(question["correct"])}<span class="tag">Correct</span></div>'
+                            )
+
+                        if last_correct:
+                            st.success("Correct — nicely done.")
+                        else:
+                            st.error("Not quite. Here's the reasoning:")
+
+                        if config.get("explain", True):
+                            render_html(
+                                f"""
+                                <div class="ai-insight">
+                                    <div class="ai-insight-label">Sam's explanation</div>
+                                    <h3>{esc(question["skill"])}</h3>
+                                    <p>{to_html_block(question["explanation"])}</p>
+                                </div>
+                                """
+                            )
+
+                            # If they picked a specific wrong MCQ choice, surface
+                            # the rationale for that distractor.
+                            if (not last_correct) and is_mcq:
+                                note = question.get("distractors", {}).get(last_answer)
+                                if note:
+                                    st.caption(f"Why that option was tempting: {note}")
+
+                        # ----- Advance -----
+                        finishing = st.session_state.session_answered >= count
+                        next_label = "Finish session →" if finishing else "Next question →"
+
+                        nav_col_1, nav_col_2 = st.columns([1, 1])
+                        with nav_col_1:
+                            if st.button("Leave session", use_container_width=True):
+                                st.session_state.practice_phase = "setup"
+                                st.session_state.answer_submitted = False
+                                st.rerun()
+                        with nav_col_2:
+                            if st.button(
+                                next_label,
+                                type="primary",
+                                use_container_width=True,
+                            ):
+                                if finishing:
+                                    finalize_session()
+                                else:
+                                    nxt = pick_next(
+                                        config,
+                                        st.session_state.session_used_ids,
+                                        st.session_state.current_difficulty,
+                                    )
+                                    if nxt is None:
+                                        finalize_session()
+                                    else:
+                                        st.session_state.current_q = nxt
+                                        st.session_state.question_start = time.time()
+                                        st.session_state.answer_submitted = False
+                                        st.session_state.session_last_answer = None
+                                        st.session_state.session_last_correct = None
+                                st.rerun()
+
+            with context_col:
+                with st.container(border=True):
+                    render_html(
+                        """
+                        <div class="card-title">Session pulse</div>
+                        <div class="card-subtitle">Live signals from your performance</div>
+                        """
+                    )
+
+                    metric_card(
+                        "Current difficulty",
+                        st.session_state.current_difficulty.title(),
+                        "Adjusts after each answer",
+                        "◇",
+                    )
+
+                    st.write("")
+
+                    session_answered = st.session_state.session_answered
+                    session_correct = st.session_state.session_correct
+                    session_acc = (
+                        session_correct / session_answered
+                        if session_answered else 0.0
+                    )
+
+                    st.markdown("**Session accuracy**")
+                    st.progress(session_acc)
+                    st.caption(
+                        f"{session_correct}/{session_answered} correct this session"
+                    )
+
+                    est = question.get("estimated_seconds")
+                    if est:
+                        st.markdown("**Suggested time**")
+                        st.caption(f"About {est} seconds for this question")
 
                 st.write("")
 
-                st.markdown("**Skill confidence**")
-                st.progress(0.61)
-                st.caption("61% · Linear equations")
+                render_html(
+                    """
+                    <div class="coach-quote">
+                        Take ten seconds to identify what the question is really
+                        testing before calculating.
+                    </div>
+                    """
+                )
 
-                st.markdown("**Suggested pace**")
-                st.progress(0.48)
-                st.caption("About 75 seconds for this question")
+        # ---------------- SUMMARY ----------------
+        elif phase == "summary":
+            answered = st.session_state.session_answered
+            correct = st.session_state.session_correct
+            session_acc = round(correct / answered * 100) if answered else 0
+            minutes = st.session_state.session_seconds / 60
 
-            st.write("")
+            section_header(
+                "Session complete",
+                "Nice work — here's how it went",
+                "Every answer has been folded into your overall progress.",
+            )
+
+            summary_cols = st.columns(3)
+            with summary_cols[0]:
+                metric_card("Questions", answered, "answered this session", "◇")
+            with summary_cols[1]:
+                metric_card("Accuracy", f"{session_acc}%",
+                            f"{correct} of {answered} correct", "✓")
+            with summary_cols[2]:
+                metric_card("Time", f"{minutes:.1f} min",
+                            "focused practice", "◷")
+
+            if session_acc >= 80:
+                verdict = (
+                    "Strong session. You're handling this difficulty comfortably — "
+                    "consider nudging the starting difficulty up next time."
+                )
+            elif session_acc >= 55:
+                verdict = (
+                    "Solid, steady work. Keep sessions like this consistent and "
+                    "the accuracy will compound."
+                )
+            else:
+                verdict = (
+                    "A tougher round — that's where the learning is. Reviewing the "
+                    "explanations for the ones you missed is the highest-value move now."
+                )
 
             render_html(
-                """
-                <div class="coach-quote">
-                    Take ten seconds to identify what the question is really
-                    testing before calculating.
+                f"""
+                <div class="ai-insight">
+                    <div class="ai-insight-label">Sam's read</div>
+                    <h3>Where you landed</h3>
+                    <p>{esc(verdict)}</p>
                 </div>
                 """
             )
+
+            action_cols = st.columns([1, 1])
+            with action_cols[0]:
+                if st.button("Start a new session", type="primary",
+                             use_container_width=True):
+                    st.session_state.practice_phase = "setup"
+                    st.rerun()
+            with action_cols[1]:
+                if st.button("Back to home", use_container_width=True):
+                    st.session_state.practice_phase = "setup"
+                    go_to("Home")
 
 
 # ============================================================
@@ -1316,29 +1895,62 @@ elif page == "Practice":
 # ============================================================
 
 elif page == "Insights":
+    history = st.session_state.history
+    has_data = len(history) > 0
+    stats = skill_stats(history)
+
     section_header(
         "Learning intelligence",
         "Your progress has a pattern",
-        "SATSam combines accuracy, pacing, confidence, and mistake type.",
+        "SATSam combines accuracy, pacing, and mistake type across your answers.",
     )
+
+    math_score = _section_scaled(history, "math")
+    rw_score = _section_scaled(history, "reading_writing")
+
+    # Pacing: share of questions answered within their suggested time.
+    timed = [e for e in history if e.get("est")]
+    if timed:
+        pace = round(
+            100 * sum(1 for e in timed if e["seconds"] <= e["est"]) / len(timed)
+        )
+    else:
+        pace = None
 
     metrics = st.columns(4)
 
     with metrics[0]:
-        metric_card("Predicted score", "1410", "Range: 1380–1450", "↗")
-
+        metric_card(
+            "Predicted score",
+            st.session_state.predicted_score if has_data else "—",
+            "Estimated from your answers" if has_data else "Awaiting data",
+            "↗",
+        )
     with metrics[1]:
-        metric_card("Math", "720", "+40 since baseline", "∑")
-
+        metric_card(
+            "Math",
+            math_score if math_score is not None else "—",
+            "Section estimate (200–800)",
+            "∑",
+        )
     with metrics[2]:
-        metric_card("Reading & Writing", "690", "+20 since baseline", "Aa")
-
+        metric_card(
+            "Reading & Writing",
+            rw_score if rw_score is not None else "—",
+            "Section estimate (200–800)",
+            "Aa",
+        )
     with metrics[3]:
-        metric_card("Pacing stability", "76%", "Improving this week", "◷")
+        metric_card(
+            "Pacing",
+            f"{pace}%" if pace is not None else "—",
+            "Answered within suggested time",
+            "◷",
+        )
 
     section_header(
         "Score trajectory",
-        "Steady gains—not random swings",
+        "How your estimate is moving",
         "Your projection updates as SATSam gathers more evidence.",
     )
 
@@ -1346,24 +1958,51 @@ elif page == "Insights":
 
     with chart_col:
         with st.container(border=True):
-            score_history = {
-                "Predicted score": [1320, 1340, 1330, 1360, 1380, 1390, 1410],
-                "Target score": [st.session_state.target_score] * 7,
-            }
+            trajectory = list(st.session_state.score_history)
+            # Include the live estimate as the latest point.
+            if has_data and (not trajectory or trajectory[-1] != st.session_state.predicted_score):
+                trajectory = trajectory + [st.session_state.predicted_score]
 
-            st.line_chart(score_history, height=330)
+            if trajectory:
+                st.line_chart(
+                    {
+                        "Predicted score": trajectory,
+                        "Target score": [st.session_state.target_score] * len(trajectory),
+                    },
+                    height=330,
+                )
+                st.caption(
+                    "Each point marks your predicted score after a completed session."
+                )
+            else:
+                empty_state(
+                    "Complete a practice session and your score trajectory will "
+                    "start plotting here."
+                )
 
     with summary_col:
+        if has_data:
+            diagnosis = (
+                f"You're averaging {accuracy()}% across "
+                f"{st.session_state.questions_solved} questions."
+            )
+            if math_score is not None and rw_score is not None:
+                if math_score >= rw_score:
+                    diagnosis += " Math is currently your stronger section."
+                else:
+                    diagnosis += " Reading and Writing is currently your stronger section."
+        else:
+            diagnosis = (
+                "Once you've answered some questions, SATSam will diagnose which "
+                "section and skills are driving your score."
+            )
+
         render_html(
-            """
+            f"""
             <div class="ai-insight">
                 <div class="ai-insight-label">Weekly diagnosis</div>
-                <h3>Your math growth is accelerating.</h3>
-                <p>
-                    Algebra accuracy rose while your average response time fell
-                    by nine seconds. Reading performance is stable, but inference
-                    questions remain less consistent.
-                </p>
+                <h3>Where you stand</h3>
+                <p>{esc(diagnosis)}</p>
             </div>
             """
         )
@@ -1373,37 +2012,50 @@ elif page == "Insights":
                 """
                 <div class="card-title">Score opportunity</div>
                 <div class="card-subtitle">
-                    Estimated points available by test day
+                    Estimated points available toward your target
                 </div>
                 """
             )
 
-            st.metric("Realistic gain", "+70 points", "with current consistency")
+            gap = max(0, st.session_state.target_score - st.session_state.predicted_score) if has_data else 0
+            st.metric(
+                "Gap to target",
+                f"+{gap} points" if has_data else "—",
+                "with current consistency" if has_data else "answer questions to estimate",
+            )
 
-            st.progress(0.63)
-
-            st.caption("You have completed 63% of the recommended preparation.")
+            prep = prep_window_percent() / 100
+            st.progress(prep)
+            st.caption(
+                f"You're {round(prep * 100)}% through your preparation window."
+            )
 
     section_header(
         "Skill map",
         "Where your next points are hiding",
-        "Priorities are ranked by expected score impact.",
+        "Ranked by your accuracy on each skill you've practiced.",
     )
 
     weak_col, strong_col = st.columns(2, gap="large")
+
+    ranked = sorted(stats.items(), key=lambda kv: kv[1]["acc"])
 
     with weak_col:
         with st.container(border=True):
             render_html(
                 """
                 <div class="card-title">Highest-impact opportunities</div>
-                <div class="card-subtitle">Skills worth prioritizing this week</div>
+                <div class="card-subtitle">Skills worth prioritizing next</div>
                 """
             )
-
-            topic_row("Linear equations", 61, "Needs work")
-            topic_row("Reading inference", 67, "Needs work")
-            topic_row("Transitions", 72, "Developing")
+            weak_list = [item for item in ranked if item[1]["acc"] < 80][:3]
+            if weak_list:
+                for skill, record in weak_list:
+                    topic_row(skill, record["acc"], status_for_accuracy(record["acc"]))
+            elif stats:
+                empty_state("No weak spots yet — everything you've practiced is at 80% or above.")
+            else:
+                empty_state("Practice a few questions to reveal your weakest skills.")
 
     with strong_col:
         with st.container(border=True):
@@ -1413,10 +2065,14 @@ elif page == "Insights":
                 <div class="card-subtitle">Skills you can trust under time pressure</div>
                 """
             )
-
-            topic_row("Punctuation boundaries", 91, "Strong")
-            topic_row("Ratios and percentages", 87, "Strong")
-            topic_row("Words in context", 84, "Strong")
+            strong_list = [item for item in reversed(ranked) if item[1]["acc"] >= 80][:3]
+            if strong_list:
+                for skill, record in strong_list:
+                    topic_row(skill, record["acc"], status_for_accuracy(record["acc"]))
+            elif stats:
+                empty_state("No skill has reached 80% yet — keep practicing to build reliable strengths.")
+            else:
+                empty_state("Practice a few questions to reveal your strongest skills.")
 
 
 # ============================================================
@@ -1748,5 +2404,16 @@ elif page == "Settings":
 
     st.write("")
 
-    if st.button("Save preferences", type="primary"):
-        st.success("Your SATSam preferences have been saved.")
+    reset_col, save_col = st.columns([1, 1])
+    with reset_col:
+        if st.button("Reset my progress", use_container_width=True):
+            st.session_state.history = []
+            st.session_state.score_history = []
+            st.session_state.sessions_completed = 0
+            st.session_state.best_streak = 0
+            st.session_state.practice_phase = "setup"
+            recompute_metrics()
+            st.success("Your progress has been cleared.")
+    with save_col:
+        if st.button("Save preferences", type="primary", use_container_width=True):
+            st.success("Your SATSam preferences have been saved.")
