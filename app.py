@@ -2475,12 +2475,9 @@ elif page == "Focus Timer":
                     </div>
                 </div>
 
-                <script>
-                    const originalDuration = {timer_seconds};
-
-                    let remainingSeconds = originalDuration;
-                    let timerInterval = null;
-                    let isRunning = false;
+                                <script>
+                    const storageKey = "satsam_focus_timer_v2";
+                    const selectedDuration = {timer_seconds};
 
                     const timeDisplay =
                         document.getElementById("timeDisplay");
@@ -2503,11 +2500,139 @@ elif page == "Focus Timer":
                     progressCircle.style.strokeDasharray =
                         circumference;
 
-                    progressCircle.style.strokeDashoffset = 0;
+                    let timerInterval = null;
+
+                    let timerState = {{
+                        duration: selectedDuration,
+                        remaining: selectedDuration,
+                        running: false,
+                        completed: false,
+                        endTime: null
+                    }};
+
+
+                    // -------------------------------------------------
+                    // LOCAL STORAGE
+                    // -------------------------------------------------
+
+                    function saveState() {{
+                        localStorage.setItem(
+                            storageKey,
+                            JSON.stringify(timerState)
+                        );
+                    }}
+
+
+                    function loadState() {{
+                        const savedState =
+                            localStorage.getItem(storageKey);
+
+                        if (!savedState) {{
+                            saveState();
+                            return;
+                        }}
+
+                        try {{
+                            const parsedState =
+                                JSON.parse(savedState);
+
+                            timerState = {{
+                                duration:
+                                    Number(parsedState.duration)
+                                    || selectedDuration,
+
+                                remaining:
+                                    Number(parsedState.remaining)
+                                    || selectedDuration,
+
+                                running:
+                                    Boolean(parsedState.running),
+
+                                completed:
+                                    Boolean(parsedState.completed),
+
+                                endTime:
+                                    parsedState.endTime
+                                    ? Number(parsedState.endTime)
+                                    : null
+                            }};
+
+                            /*
+                            If no session is active and the user changes
+                            the Streamlit duration slider, use the newly
+                            selected duration.
+                            */
+                            if (
+                                !timerState.running
+                                && !timerState.completed
+                                && timerState.remaining
+                                    === timerState.duration
+                                && timerState.duration
+                                    !== selectedDuration
+                            ) {{
+                                timerState.duration =
+                                    selectedDuration;
+
+                                timerState.remaining =
+                                    selectedDuration;
+
+                                timerState.endTime = null;
+
+                                saveState();
+                            }}
+
+                        }} catch (error) {{
+                            console.log(
+                                "Could not restore timer state.",
+                                error
+                            );
+
+                            timerState = {{
+                                duration: selectedDuration,
+                                remaining: selectedDuration,
+                                running: false,
+                                completed: false,
+                                endTime: null
+                            }};
+
+                            saveState();
+                        }}
+                    }}
+
+
+                    // -------------------------------------------------
+                    // TIME CALCULATIONS
+                    // -------------------------------------------------
+
+                    function calculateRemainingTime() {{
+                        if (
+                            timerState.running
+                            && timerState.endTime
+                        ) {{
+                            timerState.remaining = Math.max(
+                                0,
+                                Math.ceil(
+                                    (
+                                        timerState.endTime
+                                        - Date.now()
+                                    ) / 1000
+                                )
+                            );
+                        }}
+
+                        return timerState.remaining;
+                    }}
+
 
                     function formatTime(totalSeconds) {{
-                        const minutes = Math.floor(totalSeconds / 60);
-                        const seconds = totalSeconds % 60;
+                        const safeSeconds =
+                            Math.max(0, totalSeconds);
+
+                        const minutes =
+                            Math.floor(safeSeconds / 60);
+
+                        const seconds =
+                            safeSeconds % 60;
 
                         return (
                             String(minutes).padStart(2, "0")
@@ -2516,87 +2641,200 @@ elif page == "Focus Timer":
                         );
                     }}
 
+
+                    // -------------------------------------------------
+                    // DISPLAY
+                    // -------------------------------------------------
+
                     function updateDisplay() {{
+                        const remaining =
+                            calculateRemainingTime();
+
                         timeDisplay.textContent =
-                            formatTime(remainingSeconds);
+                            formatTime(remaining);
+
+                        const duration =
+                            Math.max(timerState.duration, 1);
 
                         const elapsed =
-                            originalDuration - remainingSeconds;
+                            duration - remaining;
 
                         const progress =
-                            elapsed / originalDuration;
+                            Math.min(
+                                Math.max(elapsed / duration, 0),
+                                1
+                            );
 
                         progressCircle.style.strokeDashoffset =
                             circumference * progress;
+
+                        if (timerState.completed) {{
+                            timerStatus.textContent =
+                                "Session complete";
+
+                            sessionMessage.textContent =
+                                "Excellent work. Take a short, "
+                                + "intentional break.";
+
+                            startButton.textContent =
+                                "Complete";
+
+                        }} else if (timerState.running) {{
+                            timerStatus.textContent =
+                                "Focus in progress";
+
+                            sessionMessage.textContent = "";
+
+                            startButton.textContent =
+                                "Running";
+
+                        }} else if (
+                            timerState.remaining
+                            < timerState.duration
+                        ) {{
+                            timerStatus.textContent =
+                                "Session paused";
+
+                            sessionMessage.textContent = "";
+
+                            startButton.textContent =
+                                "Resume";
+
+                        }} else {{
+                            timerStatus.textContent =
+                                "Ready to focus";
+
+                            sessionMessage.textContent = "";
+
+                            startButton.textContent =
+                                "Start";
+                        }}
                     }}
+
+
+                    // -------------------------------------------------
+                    // TIMER CONTROLS
+                    // -------------------------------------------------
 
                     function startTimer() {{
-                        if (isRunning || remainingSeconds <= 0) {{
+                        if (
+                            timerState.running
+                            || timerState.completed
+                            || timerState.remaining <= 0
+                        ) {{
                             return;
                         }}
 
-                        isRunning = true;
+                        timerState.running = true;
 
-                        timerStatus.textContent = "Focus in progress";
-                        sessionMessage.textContent = "";
-                        startButton.textContent = "Running";
+                        timerState.endTime =
+                            Date.now()
+                            + timerState.remaining * 1000;
 
-                        timerInterval = setInterval(() => {{
-                            remainingSeconds -= 1;
-                            updateDisplay();
-
-                            if (remainingSeconds <= 0) {{
-                                completeTimer();
-                            }}
-                        }}, 1000);
+                        saveState();
+                        updateDisplay();
+                        beginInterval();
                     }}
+
 
                     function pauseTimer() {{
-                        if (!isRunning) {{
+                        if (!timerState.running) {{
                             return;
                         }}
 
-                        clearInterval(timerInterval);
-                        timerInterval = null;
-                        isRunning = false;
+                        calculateRemainingTime();
 
-                        timerStatus.textContent = "Session paused";
-                        startButton.textContent = "Resume";
+                        timerState.running = false;
+                        timerState.endTime = null;
+
+                        clearTimerInterval();
+                        saveState();
+                        updateDisplay();
                     }}
+
 
                     function resetTimer() {{
-                        clearInterval(timerInterval);
-                        timerInterval = null;
-                        isRunning = false;
-                        remainingSeconds = originalDuration;
+                        clearTimerInterval();
 
-                        timerStatus.textContent = "Ready to focus";
-                        sessionMessage.textContent = "";
-                        startButton.textContent = "Start";
+                        timerState = {{
+                            duration: selectedDuration,
+                            remaining: selectedDuration,
+                            running: false,
+                            completed: false,
+                            endTime: null
+                        }};
 
+                        saveState();
                         updateDisplay();
                     }}
 
-                    function completeTimer() {{
-                        clearInterval(timerInterval);
-                        timerInterval = null;
-                        isRunning = false;
-                        remainingSeconds = 0;
 
+                    function completeTimer(
+                        playSound = true
+                    ) {{
+                        clearTimerInterval();
+
+                        timerState.remaining = 0;
+                        timerState.running = false;
+                        timerState.completed = true;
+                        timerState.endTime = null;
+
+                        saveState();
                         updateDisplay();
 
-                        timerStatus.textContent = "Session complete";
-                        sessionMessage.textContent =
-                            "Excellent work. Take a short, intentional break.";
+                        if (playSound) {{
+                            playCompletionSound();
+                        }}
+                    }}
 
-                        startButton.textContent = "Complete";
 
+                    // -------------------------------------------------
+                    // INTERVAL MANAGEMENT
+                    // -------------------------------------------------
+
+                    function clearTimerInterval() {{
+                        if (timerInterval !== null) {{
+                            clearInterval(timerInterval);
+                            timerInterval = null;
+                        }}
+                    }}
+
+
+                    function beginInterval() {{
+                        clearTimerInterval();
+
+                        timerInterval = setInterval(() => {{
+                            const remaining =
+                                calculateRemainingTime();
+
+                            if (remaining <= 0) {{
+                                completeTimer(true);
+                                return;
+                            }}
+
+                            /*
+                            Save periodically so the paused value is
+                            always accurate if the iframe disappears.
+                            */
+                            saveState();
+                            updateDisplay();
+
+                        }}, 250);
+                    }}
+
+
+                    // -------------------------------------------------
+                    // COMPLETION SOUND
+                    // -------------------------------------------------
+
+                    function playCompletionSound() {{
                         try {{
+                            const AudioContextClass =
+                                window.AudioContext
+                                || window.webkitAudioContext;
+
                             const audioContext =
-                                new (
-                                    window.AudioContext
-                                    || window.webkitAudioContext
-                                )();
+                                new AudioContextClass();
 
                             const oscillator =
                                 audioContext.createOscillator();
@@ -2605,7 +2843,9 @@ elif page == "Focus Timer":
                                 audioContext.createGain();
 
                             oscillator.connect(gainNode);
-                            gainNode.connect(audioContext.destination);
+                            gainNode.connect(
+                                audioContext.destination
+                            );
 
                             oscillator.frequency.value = 660;
                             oscillator.type = "sine";
@@ -2615,15 +2855,18 @@ elif page == "Focus Timer":
                                 audioContext.currentTime
                             );
 
-                            gainNode.gain.exponentialRampToValueAtTime(
-                                0.001,
-                                audioContext.currentTime + 1.2
-                            );
+                            gainNode.gain
+                                .exponentialRampToValueAtTime(
+                                    0.001,
+                                    audioContext.currentTime + 1.2
+                                );
 
                             oscillator.start();
+
                             oscillator.stop(
                                 audioContext.currentTime + 1.2
                             );
+
                         }} catch (error) {{
                             console.log(
                                 "Completion sound unavailable.",
@@ -2632,7 +2875,63 @@ elif page == "Focus Timer":
                         }}
                     }}
 
-                    updateDisplay();
+
+                    // -------------------------------------------------
+                    // RESTORE THE TIMER WHEN PAGE REOPENS
+                    // -------------------------------------------------
+
+                    loadState();
+
+                    if (
+                        timerState.running
+                        && timerState.endTime
+                    ) {{
+                        calculateRemainingTime();
+
+                        /*
+                        The timer may have finished while the user was
+                        on another SATSam page.
+                        */
+                        if (timerState.remaining <= 0) {{
+                            completeTimer(false);
+                        }} else {{
+                            saveState();
+                            updateDisplay();
+                            beginInterval();
+                        }}
+                    }} else {{
+                        updateDisplay();
+                    }}
+
+
+                    /*
+                    Keep the saved time accurate if the browser tab is
+                    hidden or restored.
+                    */
+                    document.addEventListener(
+                        "visibilitychange",
+                        () => {{
+                            if (
+                                document.visibilityState === "visible"
+                            ) {{
+                                if (
+                                    timerState.running
+                                    && timerState.endTime
+                                ) {{
+                                    calculateRemainingTime();
+
+                                    if (
+                                        timerState.remaining <= 0
+                                    ) {{
+                                        completeTimer(false);
+                                    }} else {{
+                                        updateDisplay();
+                                        beginInterval();
+                                    }}
+                                }}
+                            }}
+                        }}
+                    );
                 </script>
             </body>
             </html>
@@ -2645,9 +2944,9 @@ elif page == "Focus Timer":
             )
 
             st.caption(
-                "Changing the session length resets the timer to the "
-                "new duration."
-            )
+    "The timer continues while you use other SATSam pages. "
+    "Press Reset before changing the duration of an active session."
+)
 
     with intention_col:
         with st.container(border=True):
