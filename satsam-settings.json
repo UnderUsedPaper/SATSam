@@ -1,17 +1,72 @@
 {
-  "study_goal": 15,
-  "target_score": 490,
+  "study_goal": 45,
+  "target_score": 400,
   "sat_date": "2026-09-06",
   "default_practice_subject": "SATSam recommendation",
-  "default_start_difficulty": "Foundation",
-  "default_practice_count": 5,
-  "auto_explain": false,
-  "show_timing": false,
-  "ai_enabled": false,
-  "ai_host": "",
-  "ai_model": "",
-  "ai_temperature": 0.0,
+  "default_start_difficulty": "Standard",
+  "default_practice_count": 12,
+  "auto_explain": true,
+  "show_timing": true,
+  "ai_enabled": true,
+  "ai_host": "http://localhost:11434",
+  "ai_model": "qwen3:8b",
+  "ai_temperature": 0.7,
   "explanation_style": "Concise and strategic",
   "coach_personality": "Warm and focused",
-  "ai_hints": false
+  "ai_hints": true,
+  "ai_study_plan": {
+    "strategy": "This week's plan prioritizes foundational skills in math and reading, starting with the weakest areas first while maintaining balance. We will focus on building confidence and familiarity with question types through targeted practice and review.",
+    "days": [
+      {
+        "day": "Monday",
+        "minutes": 45,
+        "focus": "Reading Comprehension",
+        "task": "Practice Passage Analysis",
+        "detail": "Complete 1 reading passage with 5 questions, focusing on main idea and detail retrieval."
+      },
+      {
+        "day": "Tuesday",
+        "minutes": 45,
+        "focus": "Math Problem Solving",
+        "task": "Math Practice Set",
+        "detail": "Work through 10 math problems covering algebra and geometry with a focus on problem-solving strategies."
+      },
+      {
+        "day": "Wednesday",
+        "minutes": 45,
+        "focus": "Reading Vocabulary",
+        "task": "Vocabulary in Context",
+        "detail": "Review 10 SAT vocabulary words and practice using them in context with reading passages."
+      },
+      {
+        "day": "Thursday",
+        "minutes": 45,
+        "focus": "Math Data Analysis",
+        "task": "Data Interpretation Practice",
+        "detail": "Complete 5 data interpretation questions using charts and graphs."
+      },
+      {
+        "day": "Friday",
+        "minutes": 45,
+        "focus": "Reading & Math Review",
+        "task": "Quick Review and Reflection",
+        "detail": "Review key concepts from the week, focusing on areas of confusion and reinforcing understanding."
+      },
+      {
+        "day": "Saturday",
+        "minutes": 120,
+        "focus": "Integrated Reasoning",
+        "task": "Full Practice Set",
+        "detail": "Complete a full SAT practice set (10 reading, 10 math) with a focus on time management and accuracy."
+      },
+      {
+        "day": "Sunday",
+        "minutes": 120,
+        "focus": "Error Analysis",
+        "task": "Review and Reflect",
+        "detail": "Review all mistakes from the practice set, analyze patterns, and create a plan for improvement."
+      }
+    ],
+    "weekly_focus": "Build foundational skills in reading and math through targeted practice and review, with a focus on improving accuracy and time management."
+  }
 }

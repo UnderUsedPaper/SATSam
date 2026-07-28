@@ -2,11 +2,13 @@ import html as html_lib
 import json
 import os
 import random
+import re
 import time
 import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta
 import streamlit.components.v1 as components
+import ollama
 
 import streamlit as st
 
@@ -119,6 +121,7 @@ PERSISTED_KEYS = [
     "explanation_style",
     "coach_personality",
     "ai_hints",
+    "ai_study_plan",
 ]
 
 
@@ -208,6 +211,298 @@ def ollama_reachable(host, timeout=3):
         return False, str(error)
 
 
+# ------------------------------------------------------------
+# LOCAL MODEL CALLS
+#
+# All generation flows through ollama_chat, which talks to the
+# local Ollama server configured in Settings. Every feature that
+# uses the model degrades gracefully: if the server is
+# unreachable or returns something unexpected, the app falls back
+# to its built-in explanations and heuristics.
+# ------------------------------------------------------------
+
+_THINK_PATTERN = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+
+
+def strip_think(text):
+    """Remove qwen3-style <think> reasoning so only the answer remains."""
+    if not text:
+        return ""
+    cleaned = _THINK_PATTERN.sub("", text)
+    # A response may stream reasoning first and forget to close the tag, or
+    # include only a closing tag right before the final answer.
+    if "<think>" in cleaned and "</think>" not in cleaned:
+        cleaned = cleaned.split("<think>")[0]
+    if "</think>" in cleaned:
+        cleaned = cleaned.split("</think>")[-1]
+    return cleaned.strip()
+
+
+def _extract_content(response):
+    """Read message content from either dict-style or object-style responses,
+    depending on the installed ollama version."""
+    message = response["message"] if isinstance(response, dict) else response.message
+    return message["content"] if isinstance(message, dict) else message.content
+
+
+def _chat_with_optional_think(client, kwargs):
+    """Call chat with thinking disabled when the installed Ollama supports it.
+    qwen3 emits reasoning tokens by default; turning them off keeps tutoring
+    responses fast. Older clients or non-thinking models fall back cleanly."""
+    try:
+        return client.chat(think=False, **kwargs)
+    except TypeError:
+        return client.chat(**kwargs)
+    except Exception as error:
+        if "think" in str(error).lower():
+            return client.chat(**kwargs)
+        raise
+
+
+def ollama_chat(system_prompt, user_prompt, temperature=None, force_json=False):
+    """Send a single system/user exchange to the local model.
+    Returns (True, text) on success or (False, error_message)."""
+    if temperature is None:
+        temperature = st.session_state.get("ai_temperature", 0.7)
+
+    kwargs = {
+        "model": st.session_state.get("ai_model", "qwen3:8b"),
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "options": {"temperature": float(temperature)},
+    }
+    if force_json:
+        kwargs["format"] = "json"
+
+    try:
+        client = ollama.Client(
+            host=(st.session_state.get("ai_host") or "http://localhost:11434")
+        )
+        response = _chat_with_optional_think(client, kwargs)
+        return True, strip_think(_extract_content(response))
+    except Exception as error:
+        return False, str(error)
+
+
+def parse_json_response(text):
+    """Best-effort JSON parse of a model response, tolerating code fences and
+    stray prose around the JSON payload."""
+    if not text:
+        return None
+
+    cleaned = text.strip()
+    cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.IGNORECASE).strip()
+    cleaned = re.sub(r"```$", "", cleaned).strip()
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # Fall back to the outermost {...} or [...] block if extra text surrounds it.
+    starts = [pos for pos in (cleaned.find("{"), cleaned.find("[")) if pos != -1]
+    if not starts:
+        return None
+    start = min(starts)
+    closer = "}" if cleaned[start] == "{" else "]"
+    end = cleaned.rfind(closer)
+    if end <= start:
+        return None
+    try:
+        return json.loads(cleaned[start:end + 1])
+    except json.JSONDecodeError:
+        return None
+
+
+# ---- Feature 1: answer explanations -------------------------------------
+
+def _question_for_prompt(question):
+    """Flatten a question into plain text the model can reason over."""
+    lines = [
+        f"Skill: {question['skill']}",
+        f"Domain: {question['domain']} | Difficulty: {question['difficulty']}",
+    ]
+    if question.get("stimulus"):
+        lines.append(f"Passage/context: {question['stimulus']}")
+    lines.append(f"Question: {question['prompt']}")
+    if question["format"] == "mcq":
+        for choice in question["choices"]:
+            lines.append(f"  {choice['id']}. {choice['text']}")
+        lines.append(f"Correct choice: {question['correct']}")
+    else:
+        lines.append(f"Correct answer: {question['correct']}")
+    if question.get("explanation"):
+        lines.append(f"Reference explanation: {question['explanation']}")
+    return "\n".join(lines)
+
+
+def ai_explain_answer(question, user_answer, is_correct):
+    """Coach-style explanation grounded in the question's reference answer."""
+    if is_correct:
+        task = (
+            "The student answered CORRECTLY. In two or three sentences, confirm "
+            "why the answer is right and reinforce the key idea or shortcut worth "
+            "remembering. Do not simply repeat the reference explanation word for "
+            "word."
+        )
+    else:
+        task = (
+            f"The student answered INCORRECTLY, choosing '{user_answer}'. Briefly "
+            "diagnose the most likely misstep behind that choice, then guide the "
+            "student to the correct answer with clear reasoning. Stay encouraging."
+        )
+
+    user_prompt = (
+        f"{_question_for_prompt(question)}\n\n"
+        f"Student's answer: {user_answer}\n\n"
+        f"{task} Treat the reference explanation as the source of truth for the "
+        "underlying math or logic, and address the student directly. Do not use "
+        "Markdown headers; keep it to a short paragraph."
+    )
+    return ollama_chat(build_coach_system_prompt(), user_prompt)
+
+
+def get_ai_explanation(question, user_answer, is_correct):
+    """Cache explanations per answer so Streamlit reruns don't re-query the model."""
+    cache = st.session_state.setdefault("ai_explanations", {})
+    key = f"{question['id']}::{user_answer}"
+    if key not in cache:
+        cache[key] = ai_explain_answer(question, user_answer, is_correct)
+    return cache[key]
+
+
+# ---- Feature 3: weakness-aware question targeting -----------------------
+
+def ai_recommend_focus_skills(history):
+    """Ask the model which skills to prioritize next. Returns a list of skill
+    names drawn from the question bank, or [] on any failure."""
+    stats = skill_stats(history)
+    if not stats:
+        return []
+
+    performance = "\n".join(
+        f"- {skill}: {record['acc']}% correct over {record['n']} question(s) "
+        f"[{record['section']}]"
+        for skill, record in sorted(stats.items(), key=lambda kv: kv[1]["acc"])
+    )
+    available = sorted({q["skill"] for q in QUESTIONS})
+
+    system_prompt = (
+        "You are an SAT prep strategist. You respond only with valid JSON."
+    )
+    user_prompt = (
+        "A student's practice performance, weakest first:\n"
+        f"{performance}\n\n"
+        "Skills you may target (use these names exactly):\n"
+        f"{', '.join(available)}\n\n"
+        "Pick the three to five skills this student should drill next to gain the "
+        "most points. Prioritize low accuracy, but also flag skills attempted very "
+        "few times, since an untested skill is a hidden risk. Respond with JSON of "
+        'the form {"focus_skills": ["exact skill name", ...]}.'
+    )
+    ok, text = ollama_chat(system_prompt, user_prompt, temperature=0.3,
+                           force_json=True)
+    if not ok:
+        return []
+    data = parse_json_response(text)
+    if not isinstance(data, dict):
+        return []
+    valid = set(available)
+    return [s for s in data.get("focus_skills", []) if s in valid]
+
+
+# ---- Feature 4: end-of-session review -----------------------------------
+
+def ai_session_review(entries):
+    """Summarize a finished session and surface concrete next steps."""
+    if not entries:
+        return False, "No answers to review yet."
+
+    correct = sum(1 for e in entries if e["correct"])
+    total = len(entries)
+
+    by_skill = {}
+    for entry in entries:
+        record = by_skill.setdefault(entry["skill"], {"n": 0, "c": 0})
+        record["n"] += 1
+        record["c"] += 1 if entry["correct"] else 0
+
+    breakdown = "\n".join(
+        f"- {skill}: {record['c']}/{record['n']} correct"
+        for skill, record in by_skill.items()
+    )
+    missed = sorted({e["skill"] for e in entries if not e["correct"]})
+
+    summary = (
+        f"Session score: {correct}/{total} correct.\n"
+        f"Accuracy by skill:\n{breakdown}\n"
+        f"Skills with at least one miss: {', '.join(missed) if missed else 'none'}."
+    )
+    user_prompt = (
+        "A student just finished an adaptive SAT practice session. Results:\n\n"
+        f"{summary}\n\n"
+        "Write a short review of about four to six sentences. Name the one or two "
+        "skills they most need to work on, acknowledge what they handled well, and "
+        "end with one concrete next step. Speak directly to the student and avoid "
+        "Markdown headers."
+    )
+    return ollama_chat(build_coach_system_prompt(), user_prompt, temperature=0.5)
+
+
+# ---- Feature 2: AI-generated study plan ---------------------------------
+
+def ai_generate_study_plan():
+    """Generate a personalized 7-day plan as structured data.
+    Returns (True, plan_dict) or (False, error_message)."""
+    stats = skill_stats(st.session_state.history)
+    if stats:
+        performance = "\n".join(
+            f"- {skill}: {record['acc']}% over {record['n']} question(s) "
+            f"[{record['section']}]"
+            for skill, record in sorted(stats.items(), key=lambda kv: kv[1]["acc"])
+        )
+    else:
+        performance = "No practice history yet — assume a balanced starting point."
+
+    context = (
+        f"Target score: {st.session_state.target_score}\n"
+        f"Current predicted score: "
+        f"{st.session_state.predicted_score or 'not yet estimated'}\n"
+        f"Days until the SAT: {days_until_sat()}\n"
+        f"Weekday time budget: {st.session_state.get('weekday_minutes', 45)} minutes\n"
+        f"Weekend time budget: {st.session_state.get('weekend_minutes', 120)} minutes\n"
+        f"Preferred lighter day: {st.session_state.get('rest_day', 'Sunday')}\n"
+        f"Performance by skill (weakest first):\n{performance}"
+    )
+    system_prompt = (
+        "You are an expert SAT tutor who designs realistic weekly study plans. "
+        "You respond only with valid JSON."
+    )
+    user_prompt = (
+        f"{context}\n\n"
+        "Design a seven-day plan, Monday through Sunday, that attacks this "
+        "student's weakest skills first while keeping math and reading balanced. "
+        "Respect the weekday and weekend time budgets, and make the preferred "
+        "lighter day genuinely lighter. Respond ONLY with JSON of this exact "
+        "shape:\n"
+        '{"strategy": "two or three sentence overview", '
+        '"days": [{"day": "Monday", "minutes": 45, "focus": "skill or theme", '
+        '"task": "short task name", "detail": "one specific sentence"}], '
+        '"weekly_focus": "one sentence naming the week\'s top priority"}. '
+        "Include exactly seven day objects, in order from Monday to Sunday."
+    )
+    ok, text = ollama_chat(system_prompt, user_prompt, temperature=0.4,
+                           force_json=True)
+    if not ok:
+        return False, text
+    data = parse_json_response(text)
+    if not isinstance(data, dict) or not isinstance(data.get("days"), list):
+        return False, "The model returned an unexpected format. Please try again."
+    return True, data
+
+
 def subject_filter(question, subject) -> bool:
     if subject == "Math":
         return question["section"] == "math"
@@ -255,7 +550,13 @@ def pick_next(config, used_ids, difficulty):
 
     preferred = set()
     if config["focus"] == "Highest-impact weakness":
-        preferred = set(weakest_skills(st.session_state.history)[:3])
+        # The AI (when enabled) chooses the priority skills at session start.
+        # Otherwise fall back to the plain lowest-accuracy heuristic.
+        ai_focus = st.session_state.get("ai_focus_skills") or []
+        if ai_focus:
+            preferred = set(ai_focus)
+        else:
+            preferred = set(weakest_skills(st.session_state.history)[:3])
 
     order = [difficulty] + [d for d in DIFFICULTY_ORDER if d != difficulty]
     for level in order:
@@ -439,13 +740,19 @@ DEFAULT_STATE = {
     "show_timing": True,
 
     # AI tutor (local Ollama model) — consumed by the AI integration.
-    "ai_enabled": False,
+    "ai_enabled": True,
     "ai_host": "http://localhost:11434",
-    "ai_model": "llama3.1",
+    "ai_model": "qwen3:8b",
     "ai_temperature": 0.7,
     "explanation_style": "Concise and strategic",
     "coach_personality": "Warm and focused",
     "ai_hints": True,
+
+    # The most recent AI-generated study plan (persisted to settings).
+    "ai_study_plan": None,
+
+    # Skills the AI chose to target for the current session (runtime only).
+    "ai_focus_skills": [],
 
     # Misc.
     "pomodoro_running": False,
@@ -493,6 +800,17 @@ def start_session(config):
     st.session_state.answer_submitted = False
     st.session_state.session_last_answer = None
     st.session_state.session_last_correct = None
+
+    # Let the model prioritize which weak skills to target this session. When the
+    # AI is off or unreachable, pick_next falls back to the accuracy heuristic.
+    st.session_state.ai_focus_skills = []
+    if (st.session_state.get("ai_enabled")
+            and config["focus"] == "Highest-impact weakness"
+            and st.session_state.history):
+        with st.spinner("Sam is analyzing your weak spots…"):
+            st.session_state.ai_focus_skills = ai_recommend_focus_skills(
+                st.session_state.history
+            )
 
     question = pick_next(config, st.session_state.session_used_ids,
                          config["start_difficulty"])
@@ -1880,12 +2198,29 @@ elif page == "Practice":
                             st.error("Not quite. Here's the reasoning:")
 
                         if config.get("explain", True):
+                            # Prefer a fresh, catered explanation from the local
+                            # model; fall back to the bank's stored explanation if
+                            # the AI is off or unreachable.
+                            explanation_text = question["explanation"]
+                            explanation_label = "Sam's explanation"
+                            if st.session_state.get("ai_enabled"):
+                                with st.spinner("Sam is working through this one…"):
+                                    ok, ai_text = get_ai_explanation(
+                                        question, last_answer, last_correct
+                                    )
+                                if ok and ai_text:
+                                    explanation_text = ai_text
+                                else:
+                                    explanation_label = "Explanation"
+                            else:
+                                explanation_label = "Explanation"
+
                             render_html(
                                 f"""
                                 <div class="ai-insight">
-                                    <div class="ai-insight-label">Sam's explanation</div>
+                                    <div class="ai-insight-label">{esc(explanation_label)}</div>
                                     <h3>{esc(question["skill"])}</h3>
-                                    <p>{to_html_block(question["explanation"])}</p>
+                                    <p>{to_html_block(explanation_text)}</p>
                                 </div>
                                 """
                             )
@@ -2017,12 +2352,28 @@ elif page == "Practice":
                     "explanations for the ones you missed is the highest-value move now."
                 )
 
+            # AI review of the whole session (cached per completed session so it
+            # is generated once, not on every rerun). Falls back to the verdict.
+            review_text = verdict
+            if st.session_state.get("ai_enabled"):
+                review_cache = st.session_state.setdefault("ai_review_cache", {})
+                session_id = st.session_state.sessions_completed
+                if session_id not in review_cache:
+                    session_entries = (
+                        st.session_state.history[-answered:] if answered else []
+                    )
+                    with st.spinner("Sam is reviewing your session…"):
+                        review_cache[session_id] = ai_session_review(session_entries)
+                ok, ai_review = review_cache[session_id]
+                if ok and ai_review:
+                    review_text = ai_review
+
             render_html(
                 f"""
                 <div class="ai-insight">
                     <div class="ai-insight-label">Sam's read</div>
                     <h3>Where you landed</h3>
-                    <p>{esc(verdict)}</p>
+                    <p>{to_html_block(review_text)}</p>
                 </div>
                 """
             )
@@ -2280,84 +2631,165 @@ elif page == "Study Plan":
                 key="rest_day",
             )
 
+            plan_button_label = (
+                "Generate my plan with Sam"
+                if st.session_state.get("ai_enabled")
+                else "Regenerate my plan"
+            )
             if st.button(
-                "Regenerate my plan",
+                plan_button_label,
                 type="primary",
                 use_container_width=True,
             ):
-                st.success("Your plan was updated around your available time.")
+                if st.session_state.get("ai_enabled"):
+                    with st.spinner("Sam is building your week…"):
+                        ok, result = ai_generate_study_plan()
+                    if ok:
+                        st.session_state.ai_study_plan = result
+                        try:
+                            save_settings()
+                        except OSError as error:
+                            st.warning(
+                                f"Plan generated, but it couldn't be saved: {error}"
+                            )
+                        st.success(
+                            "Sam built a plan around your goals and weak spots."
+                        )
+                    else:
+                        st.error(f"Couldn't generate a plan: {result}")
+                else:
+                    st.success("Your plan was updated around your available time.")
+
+            if st.session_state.get("ai_study_plan"):
+                if st.button("Clear AI plan", use_container_width=True):
+                    st.session_state.ai_study_plan = None
+                    try:
+                        save_settings()
+                    except OSError:
+                        pass
+                    st.rerun()
 
     with preview_col:
-        light_day = round(weekday_minutes * 0.55 / 5) * 5
-        weekly_total = (weekday_minutes * 4) + light_day + weekend_minutes + 90
+        ai_plan = st.session_state.get("ai_study_plan")
 
-        render_html(
-            """
-            <div class="ai-insight">
-                <div class="ai-insight-label">Plan strategy</div>
-                <h3>Prioritize math without neglecting reading.</h3>
-                <p>
-                    This week allocates 55% of practice to math because it
-                    currently offers the largest point return. Reading remains
-                    frequent enough to preserve momentum.
-                </p>
-            </div>
-            """
-        )
-
-        plan_left, plan_right = st.columns(2)
-
-        with plan_left:
+        if ai_plan:
+            strategy = ai_plan.get("strategy") or ai_plan.get("weekly_focus") or (
+                "A plan built around your current weak spots and available time."
+            )
             render_html(
                 f"""
-                <div class="day-card">
-                    <div class="day-name">Monday · {weekday_minutes} min</div>
-                    <div class="day-task">Linear equations + guided practice</div>
-                    <div class="day-detail">8-minute lesson · 15 adaptive questions</div>
-                </div>
-                <div class="day-card">
-                    <div class="day-name">Tuesday · {weekday_minutes} min</div>
-                    <div class="day-task">Reading inference and evidence</div>
-                    <div class="day-detail">Two short passages · Mistake reflection</div>
-                </div>
-                <div class="day-card">
-                    <div class="day-name">Wednesday · {weekday_minutes} min</div>
-                    <div class="day-task">Timed mixed math module</div>
-                    <div class="day-detail">Test pacing · Calculator strategy</div>
-                </div>
-                <div class="day-card">
-                    <div class="day-name">Thursday · {weekday_minutes} min</div>
-                    <div class="day-task">Grammar precision</div>
-                    <div class="day-detail">Transitions · Sentence boundaries</div>
+                <div class="ai-insight">
+                    <div class="ai-insight-label">Sam's plan strategy</div>
+                    <h3>Your personalized week</h3>
+                    <p>{to_html_block(strategy)}</p>
                 </div>
                 """
             )
 
-        with plan_right:
+            days = ai_plan.get("days") or []
+            plan_left, plan_right = st.columns(2)
+            for index, day in enumerate(days):
+                if not isinstance(day, dict):
+                    continue
+                target_col = plan_left if index % 2 == 0 else plan_right
+                name = esc(day.get("day", f"Day {index + 1}"))
+                minutes = day.get("minutes")
+                minutes_label = f" · {esc(minutes)} min" if minutes else ""
+                task = esc(day.get("task") or day.get("focus") or "Study block")
+                detail = esc(day.get("detail") or day.get("focus") or "")
+                with target_col:
+                    render_html(
+                        f"""
+                        <div class="day-card">
+                            <div class="day-name">{name}{minutes_label}</div>
+                            <div class="day-task">{task}</div>
+                            <div class="day-detail">{detail}</div>
+                        </div>
+                        """
+                    )
+
+            weekly_focus = ai_plan.get("weekly_focus")
+            if weekly_focus:
+                render_html(
+                    f'<div class="coach-quote">{to_html_block(weekly_focus)}</div>'
+                )
+
+            st.caption(
+                "This plan is saved with your preferences. Regenerate it whenever "
+                "your performance or schedule changes."
+            )
+
+        else:
+            light_day = round(weekday_minutes * 0.55 / 5) * 5
+            weekly_total = (weekday_minutes * 4) + light_day + weekend_minutes + 90
+
             render_html(
-                f"""
-                <div class="day-card">
-                    <div class="day-name">Friday · {light_day} min</div>
-                    <div class="day-task">Light review and confidence set</div>
-                    <div class="day-detail">Saved mistakes · Five mastered questions</div>
-                </div>
-                <div class="day-card">
-                    <div class="day-name">Saturday · {weekend_minutes} min</div>
-                    <div class="day-task">Full-length practice modules</div>
-                    <div class="day-detail">Timed conditions · Automated analysis</div>
-                </div>
-                <div class="day-card">
-                    <div class="day-name">Sunday · 90 min</div>
-                    <div class="day-task">Deep mistake review</div>
-                    <div class="day-detail">Diagnose patterns · Update next week's plan</div>
-                </div>
-                <div class="day-card">
-                    <div class="day-name">Weekly outcome</div>
-                    <div class="day-task">{weekly_total} focused minutes</div>
-                    <div class="day-detail">105 questions · 2 timed modules</div>
+                """
+                <div class="ai-insight">
+                    <div class="ai-insight-label">Plan strategy</div>
+                    <h3>Prioritize math without neglecting reading.</h3>
+                    <p>
+                        This week allocates 55% of practice to math because it
+                        currently offers the largest point return. Reading remains
+                        frequent enough to preserve momentum.
+                    </p>
                 </div>
                 """
             )
+
+            plan_left, plan_right = st.columns(2)
+
+            with plan_left:
+                render_html(
+                    f"""
+                    <div class="day-card">
+                        <div class="day-name">Monday · {weekday_minutes} min</div>
+                        <div class="day-task">Linear equations + guided practice</div>
+                        <div class="day-detail">8-minute lesson · 15 adaptive questions</div>
+                    </div>
+                    <div class="day-card">
+                        <div class="day-name">Tuesday · {weekday_minutes} min</div>
+                        <div class="day-task">Reading inference and evidence</div>
+                        <div class="day-detail">Two short passages · Mistake reflection</div>
+                    </div>
+                    <div class="day-card">
+                        <div class="day-name">Wednesday · {weekday_minutes} min</div>
+                        <div class="day-task">Timed mixed math module</div>
+                        <div class="day-detail">Test pacing · Calculator strategy</div>
+                    </div>
+                    <div class="day-card">
+                        <div class="day-name">Thursday · {weekday_minutes} min</div>
+                        <div class="day-task">Grammar precision</div>
+                        <div class="day-detail">Transitions · Sentence boundaries</div>
+                    </div>
+                    """
+                )
+
+            with plan_right:
+                render_html(
+                    f"""
+                    <div class="day-card">
+                        <div class="day-name">Friday · {light_day} min</div>
+                        <div class="day-task">Light review and confidence set</div>
+                        <div class="day-detail">Saved mistakes · Five mastered questions</div>
+                    </div>
+                    <div class="day-card">
+                        <div class="day-name">Saturday · {weekend_minutes} min</div>
+                        <div class="day-task">Full-length practice modules</div>
+                        <div class="day-detail">Timed conditions · Automated analysis</div>
+                    </div>
+                    <div class="day-card">
+                        <div class="day-name">Sunday · 90 min</div>
+                        <div class="day-task">Deep mistake review</div>
+                        <div class="day-detail">Diagnose patterns · Update next week's plan</div>
+                    </div>
+                    <div class="day-card">
+                        <div class="day-name">Weekly outcome</div>
+                        <div class="day-task">{weekly_total} focused minutes</div>
+                        <div class="day-detail">105 questions · 2 timed modules</div>
+                    </div>
+                    """
+                )
 
 
 # ============================================================
@@ -3276,7 +3708,9 @@ elif page == "Settings":
             st.text_input(
                 "Model name",
                 key="ai_model",
-                placeholder="e.g. llama3.1",
+                placeholder="e.g. qwen3:8b",
+                help="Run `ollama pull qwen3:8b` first. The very first response "
+                     "after launch is slow while the model loads into memory.",
             )
 
             st.slider(
@@ -3314,7 +3748,8 @@ elif page == "Settings":
             )
 
             if st.button("Test connection", use_container_width=True):
-                reachable, detail = ollama_reachable(st.session_state.ai_host)
+                host = st.session_state.get("ai_host") or "http://localhost:11434"
+                reachable, detail = ollama_reachable(host)
                 if reachable and detail:
                     st.success("Connected. Models available: " + ", ".join(detail))
                 elif reachable:
