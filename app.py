@@ -120,7 +120,7 @@ PERSISTED_KEYS = [
     "ai_temperature",
     "explanation_style",
     "coach_personality",
-    "ai_hints",
+    "study_circumstances",
     "ai_study_plan",
 ]
 
@@ -192,9 +192,14 @@ def build_coach_system_prompt():
         next(iter(COACH_PERSONALITY_GUIDANCE.values())),
     )
     return (
-        "You are Sam, a supportive SAT coach helping a student improve. "
+        "You are Sam, a warm and genuinely encouraging SAT coach who cares about "
+        "the student you're helping. You speak to them directly and kindly, the way "
+        "a patient mentor would sitting right beside them. "
         f"{personality} {style} "
-        "Keep every explanation accurate and specific to the question at hand."
+        "Always address the student as \"you,\" never refer to them in the third "
+        "person, and never sound like a system, a report, or a textbook. Keep every "
+        "explanation accurate and specific to the question at hand, and end on a note "
+        "that leaves them feeling capable of getting the next one."
     )
 
 
@@ -286,6 +291,98 @@ def ollama_chat(system_prompt, user_prompt, temperature=None, force_json=False):
         return False, str(error)
 
 
+def build_chat_system_prompt():
+    """System prompt for the free-form 'Chat with Sam' assistant. Warm, personal,
+    and aware of the student's current goals and performance."""
+    parts = [
+        "You are Sam, a warm, encouraging, and knowledgeable SAT coach. You are "
+        "chatting one-on-one with a student inside their study app. Talk to them "
+        "like a kind human mentor: friendly, direct, specific, and clearly on their "
+        "side. Use \"you,\" keep answers reasonably short and easy to read, and never "
+        "sound like a system or a form.",
+    ]
+
+    # Personalize with whatever context we happen to have.
+    try:
+        target = st.session_state.get("target_score")
+        days = days_until_sat()
+        acc = accuracy()
+        answered = st.session_state.get("questions_solved", 0)
+        weak = weakest_skills(st.session_state.get("history", []))
+        bits = []
+        if target:
+            bits.append(f"their target score is {target}")
+        bits.append(f"their SAT is about {days} days away")
+        if answered:
+            bits.append(
+                f"they've answered {answered} practice questions at {acc}% accuracy so far"
+            )
+        if weak:
+            bits.append(
+                "skills they're finding hardest right now include "
+                + ", ".join(weak[:3])
+            )
+        circumstances = (st.session_state.get("study_circumstances") or "").strip()
+        if circumstances:
+            bits.append(
+                "they've told you their life is harder than usual right now: "
+                f"{circumstances}"
+            )
+        if bits:
+            parts.append(
+                "Here is what you know about this student: "
+                + "; ".join(bits)
+                + ". Use it to make your advice feel personal, but only raise it when "
+                "it's relevant, and always stay kind and non-judgmental."
+            )
+    except Exception:
+        pass
+
+    # If the chat was opened from a specific missed question, ground Sam in it.
+    context = st.session_state.get("chat_context")
+    if isinstance(context, dict) and context.get("question"):
+        q = context["question"]
+        parts.append(
+            "The student just got the following question wrong and wants to really "
+            "understand it. Gently help them see where their thinking went sideways "
+            "and how to get it right next time, without ever making them feel bad:\n"
+            + _question_for_prompt(q)
+            + f"\nThe answer they chose was: {context.get('user_answer')}."
+        )
+
+    parts.append(
+        "If they ask about something unrelated to the SAT, you can still be helpful "
+        "and kind, but gently keep them oriented toward their goal."
+    )
+    return "\n\n".join(parts)
+
+
+def ollama_chat_multi(messages, temperature=None):
+    """Send a full multi-turn conversation to the local model. `messages` is a list
+    of {"role", "content"} dicts (user/assistant), without the system message.
+    Returns (True, text) on success or (False, error_message)."""
+    if temperature is None:
+        temperature = st.session_state.get("ai_temperature", 0.7)
+
+    kwargs = {
+        "model": st.session_state.get("ai_model", "qwen3:8b"),
+        "messages": (
+            [{"role": "system", "content": build_chat_system_prompt()}]
+            + list(messages)
+        ),
+        "options": {"temperature": float(temperature)},
+    }
+
+    try:
+        client = ollama.Client(
+            host=(st.session_state.get("ai_host") or "http://localhost:11434")
+        )
+        response = _chat_with_optional_think(client, kwargs)
+        return True, strip_think(_extract_content(response))
+    except Exception as error:
+        return False, str(error)
+
+
 def parse_json_response(text):
     """Best-effort JSON parse of a model response, tolerating code fences and
     stray prose around the JSON payload."""
@@ -342,24 +439,24 @@ def ai_explain_answer(question, user_answer, is_correct):
     """Coach-style explanation grounded in the question's reference answer."""
     if is_correct:
         task = (
-            "The student answered CORRECTLY. In two or three sentences, confirm "
-            "why the answer is right and reinforce the key idea or shortcut worth "
-            "remembering. Do not simply repeat the reference explanation word for "
-            "word."
+            "The student answered CORRECTLY. In two or three sentences, celebrate "
+            "that and reinforce the key idea or shortcut worth remembering. Do not "
+            "simply repeat the reference explanation word for word."
         )
     else:
         task = (
-            f"The student answered INCORRECTLY, choosing '{user_answer}'. Briefly "
-            "diagnose the most likely misstep behind that choice, then guide the "
-            "student to the correct answer with clear reasoning. Stay encouraging."
+            f"The student answered INCORRECTLY, choosing '{user_answer}'. Warmly and "
+            "briefly name the most likely misstep behind that choice, then walk them "
+            "to the correct answer with clear, reassuring reasoning."
         )
 
     user_prompt = (
         f"{_question_for_prompt(question)}\n\n"
         f"Student's answer: {user_answer}\n\n"
         f"{task} Treat the reference explanation as the source of truth for the "
-        "underlying math or logic, and address the student directly. Do not use "
-        "Markdown headers; keep it to a short paragraph."
+        "underlying math or logic, and speak warmly and directly to the student, as "
+        "if you're sitting beside them and glad to help. Do not use Markdown headers; "
+        "keep it to a short, encouraging paragraph."
     )
     return ollama_chat(build_coach_system_prompt(), user_prompt)
 
@@ -478,7 +575,7 @@ def normalize_fingerprint(data, question, user_answer, elapsed_seconds):
     student_pattern = str(
         data.get(
             "student_pattern",
-            "This may be an isolated mistake. SATSam will compare it with future answers.",
+            "This may be an isolated mistake. Sam will compare it with future answers.",
         )
     ).strip()
 
@@ -516,8 +613,8 @@ def fallback_error_fingerprint(question, user_answer, elapsed_seconds):
     if estimated and elapsed_seconds < estimated * 0.35:
         error_type = "rushed_answer"
         root_cause = (
-            "The response was submitted much faster than the suggested time, "
-            "which may mean the question or answer choices were not fully checked."
+            "You answered much faster than the suggested time, so it's worth "
+            "checking whether the question or answer choices got a full read."
         )
         evidence = (
             f"You answered in {round(elapsed_seconds)} seconds while this question "
@@ -531,8 +628,8 @@ def fallback_error_fingerprint(question, user_answer, elapsed_seconds):
     elif estimated and elapsed_seconds > estimated * 1.8:
         error_type = "overthinking"
         root_cause = (
-            "You may have used a longer or more complicated approach than the "
-            "question required."
+            "You may have taken a longer or more complicated route than this "
+            "question needed."
         )
         evidence = (
             f"You spent {round(elapsed_seconds)} seconds on a question estimated "
@@ -547,7 +644,7 @@ def fallback_error_fingerprint(question, user_answer, elapsed_seconds):
         error_type = "tempting_distractor"
         root_cause = distractor_note
         evidence = (
-            "The selected option matches a known distractor pattern stored "
+            "The option you chose matches a known distractor pattern stored "
             "with this question."
         )
         strategy = (
@@ -558,8 +655,8 @@ def fallback_error_fingerprint(question, user_answer, elapsed_seconds):
     else:
         error_type = "concept_gap"
         root_cause = (
-            f"The response suggests an incomplete understanding of "
-            f"{question.get('skill', 'the tested concept')}."
+            f"Your answer suggests the idea behind "
+            f"{question.get('skill', 'the tested concept')} isn't fully settled yet."
         )
         evidence = (
             f"You entered {user_answer}, while the supported answer is "
@@ -581,7 +678,7 @@ def fallback_error_fingerprint(question, user_answer, elapsed_seconds):
             f"{question.get('skill', 'this skill')}."
         ),
         "student_pattern": (
-            "SATSam needs more attempts to determine whether this is a recurring pattern."
+            "Sam needs a few more attempts to tell whether this is a recurring pattern."
         ),
         "confidence": 0.62,
     }
@@ -646,14 +743,14 @@ def ai_error_fingerprint(question, user_answer, elapsed_seconds):
     estimated_seconds = question.get("estimated_seconds") or 0
 
     system_prompt = """
-You are SATSam's cognitive-diagnosis engine.
+You are Sam's cognitive-diagnosis engine, and you care about this student.
 
 Your job is not merely to explain the correct answer. Identify the most likely
 reasoning behavior that caused the student's incorrect answer.
 
-You must stay grounded in the question, the reference explanation, the selected
-answer, any known distractor rationale, the response time, and the student's
-recent error history.
+Stay grounded in the question, the reference explanation, the selected answer,
+any known distractor rationale, the response time, and the student's recent
+error history.
 
 Choose exactly one error_type from:
 - concept_gap
@@ -668,8 +765,9 @@ Choose exactly one error_type from:
 - careless_error
 - unknown
 
-Do not claim certainty about the student's mental state. Use cautious language
-such as "likely," "may have," or "suggests."
+Write the human-facing text warmly and directly to the student ("you"), never
+clinically. Do not claim certainty about their mental state; use cautious,
+gentle language such as "likely," "may have," or "suggests."
 
 Return only valid JSON. Do not use Markdown or add text outside the JSON.
 """.strip()
@@ -692,11 +790,11 @@ RECENT DIAGNOSED ERRORS
 Return this exact JSON structure:
 {{
   "error_type": "one allowed error type",
-  "root_cause": "one or two sentences describing the likely underlying mistake",
+  "root_cause": "one or two warm sentences describing the likely underlying mistake",
   "evidence": "specific evidence from the student's answer, timing, or distractor",
-  "micro_skill": "the narrow skill the student should improve",
+  "micro_skill": "the narrow skill to strengthen",
   "recommended_strategy": "one concrete strategy usable on a future SAT question",
-  "next_step": "one immediate recovery action",
+  "next_step": "one immediate, doable recovery action",
   "student_pattern": "state whether this resembles a prior pattern or may be isolated",
   "confidence": 0.0
 }}
@@ -704,7 +802,7 @@ Return this exact JSON structure:
 Confidence must be between 0 and 1.
 
 Do not merely say that the answer was wrong. Diagnose the reasoning behavior
-that most likely produced it.
+that most likely produced it, and speak to the student kindly.
 """.strip()
 
     ok, text = ollama_chat(
@@ -792,24 +890,12 @@ def render_error_fingerprint(fingerprint):
         else "SATSam backup diagnosis"
     )
 
-    root_cause = to_html_block(
-        fingerprint.get("root_cause", "")
-    )
-    evidence = to_html_block(
-        fingerprint.get("evidence", "")
-    )
-    micro_skill = esc(
-        fingerprint.get("micro_skill", "")
-    )
-    strategy = to_html_block(
-        fingerprint.get("recommended_strategy", "")
-    )
-    student_pattern = to_html_block(
-        fingerprint.get("student_pattern", "")
-    )
-    next_step = esc(
-        fingerprint.get("next_step", "")
-    )
+    root_cause = to_html_block(fingerprint.get("root_cause", ""))
+    evidence = to_html_block(fingerprint.get("evidence", ""))
+    micro_skill = esc(fingerprint.get("micro_skill", ""))
+    strategy = to_html_block(fingerprint.get("recommended_strategy", ""))
+    student_pattern = to_html_block(fingerprint.get("student_pattern", ""))
+    next_step = esc(fingerprint.get("next_step", ""))
 
     render_html(
         f"""
@@ -821,295 +907,68 @@ def render_error_fingerprint(fingerprint):
             border: 1px solid #D8CCBC;
             border-left: 5px solid {accent};
             background:
-                radial-gradient(
-                    circle at top right,
-                    {accent}18,
-                    transparent 42%
-                ),
-                linear-gradient(
-                    145deg,
-                    #FBF7EF 0%,
-                    #F7F0E5 100%
-                );
-            box-shadow:
-                0 12px 28px rgba(76, 57, 41, 0.08),
-                0 2px 7px rgba(76, 57, 41, 0.05);
+                radial-gradient(circle at top right, {accent}18, transparent 42%),
+                linear-gradient(145deg, #FBF7EF 0%, #F7F0E5 100%);
+            box-shadow: 0 12px 28px rgba(76, 57, 41, 0.08), 0 2px 7px rgba(76, 57, 41, 0.05);
         ">
-
-            <!-- Header -->
-            <div style="
-                display: flex;
-                align-items: flex-start;
-                justify-content: space-between;
-                gap: 18px;
-                margin-bottom: 20px;
-            ">
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    gap: 13px;
-                ">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 13px;">
                     <div style="
-                        width: 46px;
-                        height: 46px;
-                        flex: 0 0 46px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        border-radius: 14px;
-                        background: {accent};
-                        color: #FFFDF8;
-                        font-size: 21px;
-                        font-weight: 750;
-                        box-shadow: 0 5px 12px {accent}30;
-                    ">
-                        {icon}
-                    </div>
-
+                        width: 46px; height: 46px; flex: 0 0 46px;
+                        display: flex; align-items: center; justify-content: center;
+                        border-radius: 14px; background: {accent}; color: #FFFDF8;
+                        font-size: 21px; font-weight: 750; box-shadow: 0 5px 12px {accent}30;
+                    ">{icon}</div>
                     <div>
-                        <div style="
-                            margin-bottom: 4px;
-                            color: #9A6A56;
-                            font-size: 10px;
-                            font-weight: 850;
-                            letter-spacing: 0.14em;
-                            text-transform: uppercase;
-                        ">
+                        <div style="margin-bottom: 4px; color: #9A6A56; font-size: 10px; font-weight: 850; letter-spacing: 0.14em; text-transform: uppercase;">
                             Sam's Error Fingerprint
                         </div>
-
-                        <div style="
-                            color: #34261F;
-                            font-family: Georgia, 'Times New Roman', serif;
-                            font-size: 22px;
-                            line-height: 1.2;
-                            font-weight: 700;
-                        ">
+                        <div style="color: #34261F; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; line-height: 1.2; font-weight: 700;">
                             {label}
                         </div>
                     </div>
                 </div>
-
-                <div style="
-                    padding: 7px 11px;
-                    border-radius: 999px;
-                    border: 1px solid {accent}55;
-                    background: {accent}14;
-                    color: #6F4B3D;
-                    font-size: 11px;
-                    font-weight: 750;
-                    white-space: nowrap;
-                ">
+                <div style="padding: 7px 11px; border-radius: 999px; border: 1px solid {accent}55; background: {accent}14; color: #6F4B3D; font-size: 11px; font-weight: 750; white-space: nowrap;">
                     {confidence}% confidence
                 </div>
             </div>
-
-            <!-- Confidence bar -->
-            <div style="
-                height: 7px;
-                overflow: hidden;
-                margin-bottom: 20px;
-                border-radius: 999px;
-                background: #E8DED1;
-            ">
-                <div style="
-                    width: {confidence}%;
-                    height: 100%;
-                    border-radius: 999px;
-                    background: linear-gradient(
-                        90deg,
-                        {accent},
-                        #C99374
-                    );
-                "></div>
+            <div style="height: 7px; overflow: hidden; margin-bottom: 20px; border-radius: 999px; background: #E8DED1;">
+                <div style="width: {confidence}%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, {accent}, #C99374);"></div>
             </div>
-
-            <!-- Main insight grid -->
-            <div style="
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 13px;
-            ">
-
-                <div style="
-                    padding: 16px;
-                    border-radius: 15px;
-                    border: 1px solid #DDD1C2;
-                    background: rgba(255, 253, 248, 0.82);
-                ">
-                    <div style="
-                        margin-bottom: 7px;
-                        color: #A06F58;
-                        font-size: 10px;
-                        font-weight: 850;
-                        letter-spacing: 0.11em;
-                        text-transform: uppercase;
-                    ">
-                        Likely root cause
-                    </div>
-
-                    <div style="
-                        color: #4A3930;
-                        font-size: 13px;
-                        line-height: 1.62;
-                    ">
-                        {root_cause}
-                    </div>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px;">
+                <div style="padding: 16px; border-radius: 15px; border: 1px solid #DDD1C2; background: rgba(255, 253, 248, 0.82);">
+                    <div style="margin-bottom: 7px; color: #A06F58; font-size: 10px; font-weight: 850; letter-spacing: 0.11em; text-transform: uppercase;">Likely root cause</div>
+                    <div style="color: #4A3930; font-size: 13px; line-height: 1.62;">{root_cause}</div>
                 </div>
-
-                <div style="
-                    padding: 16px;
-                    border-radius: 15px;
-                    border: 1px solid #DDD1C2;
-                    background: rgba(255, 253, 248, 0.82);
-                ">
-                    <div style="
-                        margin-bottom: 7px;
-                        color: #A06F58;
-                        font-size: 10px;
-                        font-weight: 850;
-                        letter-spacing: 0.11em;
-                        text-transform: uppercase;
-                    ">
-                        Evidence Sam noticed
-                    </div>
-
-                    <div style="
-                        color: #4A3930;
-                        font-size: 13px;
-                        line-height: 1.62;
-                    ">
-                        {evidence}
-                    </div>
+                <div style="padding: 16px; border-radius: 15px; border: 1px solid #DDD1C2; background: rgba(255, 253, 248, 0.82);">
+                    <div style="margin-bottom: 7px; color: #A06F58; font-size: 10px; font-weight: 850; letter-spacing: 0.11em; text-transform: uppercase;">Evidence Sam noticed</div>
+                    <div style="color: #4A3930; font-size: 13px; line-height: 1.62;">{evidence}</div>
                 </div>
-
-                <div style="
-                    padding: 16px;
-                    border-radius: 15px;
-                    border: 1px solid #D5D8C8;
-                    background: #F2F3E9;
-                ">
-                    <div style="
-                        margin-bottom: 7px;
-                        color: #788069;
-                        font-size: 10px;
-                        font-weight: 850;
-                        letter-spacing: 0.11em;
-                        text-transform: uppercase;
-                    ">
-                        Micro-skill to strengthen
-                    </div>
-
-                    <div style="
-                        color: #3F4538;
-                        font-size: 13px;
-                        line-height: 1.55;
-                        font-weight: 750;
-                    ">
-                        {micro_skill}
-                    </div>
+                <div style="padding: 16px; border-radius: 15px; border: 1px solid #D5D8C8; background: #F2F3E9;">
+                    <div style="margin-bottom: 7px; color: #788069; font-size: 10px; font-weight: 850; letter-spacing: 0.11em; text-transform: uppercase;">Micro-skill to strengthen</div>
+                    <div style="color: #3F4538; font-size: 13px; line-height: 1.55; font-weight: 750;">{micro_skill}</div>
                 </div>
-
-                <div style="
-                    padding: 16px;
-                    border-radius: 15px;
-                    border: 1px solid #DDD1C2;
-                    background: #FFF9EF;
-                ">
-                    <div style="
-                        margin-bottom: 7px;
-                        color: #A06F58;
-                        font-size: 10px;
-                        font-weight: 850;
-                        letter-spacing: 0.11em;
-                        text-transform: uppercase;
-                    ">
-                        Use this strategy
-                    </div>
-
-                    <div style="
-                        color: #4A3930;
-                        font-size: 13px;
-                        line-height: 1.62;
-                    ">
-                        {strategy}
-                    </div>
+                <div style="padding: 16px; border-radius: 15px; border: 1px solid #DDD1C2; background: #FFF9EF;">
+                    <div style="margin-bottom: 7px; color: #A06F58; font-size: 10px; font-weight: 850; letter-spacing: 0.11em; text-transform: uppercase;">Use this strategy</div>
+                    <div style="color: #4A3930; font-size: 13px; line-height: 1.62;">{strategy}</div>
                 </div>
             </div>
-
-            <!-- Pattern intelligence -->
-            <div style="
-                margin-top: 13px;
-                padding: 15px 16px;
-                border-radius: 15px;
-                border: 1px solid {accent}3D;
-                background: {accent}10;
-            ">
-                <div style="
-                    margin-bottom: 6px;
-                    color: {accent};
-                    font-size: 10px;
-                    font-weight: 850;
-                    letter-spacing: 0.11em;
-                    text-transform: uppercase;
-                ">
-                    Pattern intelligence
-                </div>
-
-                <div style="
-                    color: #4A3930;
-                    font-size: 13px;
-                    line-height: 1.6;
-                ">
-                    {student_pattern}
-                </div>
+            <div style="margin-top: 13px; padding: 15px 16px; border-radius: 15px; border: 1px solid {accent}3D; background: {accent}10;">
+                <div style="margin-bottom: 6px; color: {accent}; font-size: 10px; font-weight: 850; letter-spacing: 0.11em; text-transform: uppercase;">Pattern intelligence</div>
+                <div style="color: #4A3930; font-size: 13px; line-height: 1.6;">{student_pattern}</div>
             </div>
-
-            <!-- Next step -->
-            <div style="
-                display: flex;
-                align-items: flex-start;
-                gap: 9px;
-                margin-top: 15px;
-                padding: 13px 15px;
-                border-radius: 14px;
-                border: 1px solid #E1D4B5;
-                background: #FBF1D2;
-            ">
-                <div style="
-                    color: #A46F39;
-                    font-size: 12px;
-                    line-height: 1.55;
-                    font-weight: 850;
-                    white-space: nowrap;
-                ">
-                    Next:
-                </div>
-
-                <div style="
-                    color: #58452F;
-                    font-size: 12px;
-                    line-height: 1.55;
-                ">
-                    {next_step}
-                </div>
+            <div style="display: flex; align-items: flex-start; gap: 9px; margin-top: 15px; padding: 13px 15px; border-radius: 14px; border: 1px solid #E1D4B5; background: #FBF1D2;">
+                <div style="color: #A46F39; font-size: 12px; line-height: 1.55; font-weight: 850; white-space: nowrap;">Next:</div>
+                <div style="color: #58452F; font-size: 12px; line-height: 1.55;">{next_step}</div>
             </div>
-
-            <!-- Footer -->
-            <div style="
-                margin-top: 13px;
-                color: #A39586;
-                font-size: 9px;
-                letter-spacing: 0.09em;
-                line-height: 1.5;
-                text-transform: uppercase;
-            ">
-                {esc(source_note)} · Diagnosis describes a likely pattern,
-                not certainty
+            <div style="margin-top: 13px; color: #A39586; font-size: 9px; letter-spacing: 0.09em; line-height: 1.5; text-transform: uppercase;">
+                {esc(source_note)} · Diagnosis describes a likely pattern, not certainty
             </div>
         </div>
         """
     )
+
+
 # ---- Feature 3: weakness-aware question targeting -----------------------
 
 def ai_recommend_focus_skills(history):
@@ -1180,17 +1039,16 @@ def ai_session_review(entries):
     user_prompt = (
         "A student just finished an adaptive SAT practice session. Results:\n\n"
         f"{summary}\n\n"
-        "Write a short review of about four to six sentences. Name the one or two "
-        "skills they most need to work on, acknowledge what they handled well, and "
-        "end with one concrete next step. Speak directly to the student and avoid "
-        "Markdown headers."
+        "In a warm, encouraging voice, write a short note of about four to six "
+        "sentences directly to the student. Celebrate something specific they did "
+        "well, gently name the one or two skills worth focusing on next, and end with "
+        "one concrete, doable next step. Sound like a mentor who believes in them, "
+        "not a report. Avoid Markdown headers."
     )
     return ollama_chat(build_coach_system_prompt(), user_prompt, temperature=0.5)
 
 
-# ---- Feature 2: AI-generated study plan ---------------------------------
-
-# ---- Feature 2: AI-generated study plan ---------------------------------
+# ---- Feature 5: AI-generated study plan ---------------------------------
 
 PLAN_DAYS = [
     "Monday",
@@ -1282,15 +1140,10 @@ def study_plan_performance_context():
 
     for skill, record in sorted(
         stats.items(),
-        key=lambda item: (
-            item[1]["acc"],
-            -item[1]["n"],
-        ),
+        key=lambda item: (item[1]["acc"], -item[1]["n"]),
     ):
         skill_entries = [
-            entry
-            for entry in history
-            if entry.get("skill") == skill
+            entry for entry in history if entry.get("skill") == skill
         ]
 
         recent_entries = skill_entries[-5:]
@@ -1317,9 +1170,7 @@ def study_plan_performance_context():
 
 
 def infer_plan_section(focus, task, blocks=None):
-    """
-    Convert model wording into a normalized section identifier.
-    """
+    """Convert model wording into a normalized section identifier."""
     combined = " ".join(
         [
             str(focus or ""),
@@ -1329,31 +1180,14 @@ def infer_plan_section(focus, task, blocks=None):
     ).lower()
 
     math_terms = [
-        "math",
-        "algebra",
-        "equation",
-        "function",
-        "geometry",
-        "trigonometry",
-        "data analysis",
-        "problem-solving",
-        "desmos",
-        "calculator",
+        "math", "algebra", "equation", "function", "geometry", "trigonometry",
+        "data analysis", "problem-solving", "desmos", "calculator",
     ]
 
     reading_terms = [
-        "reading",
-        "writing",
-        "grammar",
-        "punctuation",
-        "transition",
-        "boundaries",
-        "inference",
-        "evidence",
-        "rhetorical",
-        "vocabulary",
-        "text structure",
-        "standard english",
+        "reading", "writing", "grammar", "punctuation", "transition",
+        "boundaries", "inference", "evidence", "rhetorical", "vocabulary",
+        "text structure", "standard english",
     ]
 
     math_score = sum(term in combined for term in math_terms)
@@ -1369,9 +1203,7 @@ def infer_plan_section(focus, task, blocks=None):
 
 
 def default_focus_for_section(section, weak_skills):
-    """
-    Select a reasonable fallback focus when the model omits one.
-    """
+    """Select a reasonable fallback focus when the model omits one."""
     if weak_skills:
         return weak_skills[0]
 
@@ -1436,11 +1268,7 @@ def realistic_blocks_for_day(minutes, section, focus, is_light_day=False):
         review_minutes = remaining - preview_minutes
 
         question_count = 22 if section == "math" else 27
-        section_label = (
-            "Math"
-            if section == "math"
-            else "Reading and Writing"
-        )
+        section_label = "Math" if section == "math" else "Reading and Writing"
 
         return [
             {
@@ -1521,31 +1349,17 @@ def realistic_blocks_for_day(minutes, section, focus, is_light_day=False):
     ]
 
 
-def normalize_plan_blocks(
-    raw_blocks,
-    minutes,
-    section,
-    focus,
-    is_light_day=False,
-):
+def normalize_plan_blocks(raw_blocks, minutes, section, focus, is_light_day=False):
     """
     Validate model-generated timed blocks.
 
-    The AI output is kept only when:
-    - it contains useful block objects;
-    - every block has a positive duration;
-    - the durations add exactly to the day's displayed total;
-    - the workload is not obviously implausible.
-
-    Otherwise SATSam builds a deterministic, realistic replacement.
+    The AI output is kept only when it contains useful block objects, every block
+    has a positive duration, the durations add exactly to the day's displayed
+    total, and the workload is not obviously implausible. Otherwise SATSam builds
+    a deterministic, realistic replacement.
     """
     if not isinstance(raw_blocks, list) or not raw_blocks:
-        return realistic_blocks_for_day(
-            minutes,
-            section,
-            focus,
-            is_light_day,
-        )
+        return realistic_blocks_for_day(minutes, section, focus, is_light_day)
 
     cleaned = []
 
@@ -1562,15 +1376,11 @@ def normalize_plan_blocks(
             continue
 
         title = str(
-            block.get("title")
-            or block.get("task")
-            or "Study block"
+            block.get("title") or block.get("task") or "Study block"
         ).strip()
 
         description = str(
-            block.get("description")
-            or block.get("detail")
-            or ""
+            block.get("description") or block.get("detail") or ""
         ).strip()
 
         try:
@@ -1592,12 +1402,7 @@ def normalize_plan_blocks(
 
     # Reject plans whose displayed work does not fill the stated duration.
     if not cleaned or total != int(minutes):
-        return realistic_blocks_for_day(
-            minutes,
-            section,
-            focus,
-            is_light_day,
-        )
+        return realistic_blocks_for_day(minutes, section, focus, is_light_day)
 
     # Reject very low workloads such as "2 questions in 45 minutes"
     # unless the block is explicitly a lesson or review block.
@@ -1605,13 +1410,7 @@ def normalize_plan_blocks(
         practice_type = block["type"].lower()
         is_question_block = any(
             term in practice_type
-            for term in [
-                "drill",
-                "practice",
-                "module",
-                "timed",
-                "question",
-            ]
+            for term in ["drill", "practice", "module", "timed", "question"]
         )
 
         if (
@@ -1619,20 +1418,13 @@ def normalize_plan_blocks(
             and block["minutes"] >= 20
             and 0 < block["question_count"] < 6
         ):
-            return realistic_blocks_for_day(
-                minutes,
-                section,
-                focus,
-                is_light_day,
-            )
+            return realistic_blocks_for_day(minutes, section, focus, is_light_day)
 
     return cleaned
 
 
 def normalize_study_plan(raw_plan):
-    """
-    Convert the model response into a complete and internally consistent plan.
-    """
+    """Convert the model response into a complete and internally consistent plan."""
     if not isinstance(raw_plan, dict):
         raw_plan = {}
 
@@ -1662,52 +1454,29 @@ def normalize_study_plan(raw_plan):
 
         focus = str(
             raw_day.get("focus")
-            or (
-                weak_skills[index % len(weak_skills)]
-                if weak_skills
-                else ""
-            )
+            or (weak_skills[index % len(weak_skills)] if weak_skills else "")
         ).strip()
 
-        task = str(
-            raw_day.get("task")
-            or raw_day.get("title")
-            or ""
-        ).strip()
+        task = str(raw_day.get("task") or raw_day.get("title") or "").strip()
 
         raw_blocks = raw_day.get("blocks")
         section = str(raw_day.get("section", "")).lower().strip()
 
         if section not in {"math", "reading_writing", "mixed"}:
-            section = infer_plan_section(
-                focus,
-                task,
-                raw_blocks,
-            )
+            section = infer_plan_section(focus, task, raw_blocks)
 
-        focus = focus or default_focus_for_section(
-            section,
-            weak_skills,
-        )
+        focus = focus or default_focus_for_section(section, weak_skills)
 
-        is_light_day = (
-            day_name == rest_day
-            and rest_day != "No lighter day"
-        )
+        is_light_day = day_name == rest_day and rest_day != "No lighter day"
 
         blocks = normalize_plan_blocks(
-            raw_blocks,
-            minutes,
-            section,
-            focus,
-            is_light_day,
+            raw_blocks, minutes, section, focus, is_light_day
         )
 
         actual_total = sum(block["minutes"] for block in blocks)
 
         total_questions = sum(
-            int(block.get("question_count", 0) or 0)
-            for block in blocks
+            int(block.get("question_count", 0) or 0) for block in blocks
         )
 
         if not task:
@@ -1722,7 +1491,7 @@ def normalize_study_plan(raw_plan):
             raw_day.get("rationale")
             or (
                 f"This session targets {focus} because it is currently one of "
-                "the student's highest-priority areas."
+                "your highest-priority areas."
             )
         ).strip()
 
@@ -1753,14 +1522,14 @@ def normalize_study_plan(raw_plan):
         or (
             "This week combines targeted instruction, realistic timed practice, "
             "and error analysis. Each session is divided into accountable blocks "
-            "that fill the student's available study time."
+            "that fit the time you actually have."
         )
     ).strip()
 
     weekly_focus = str(
         raw_plan.get("weekly_focus")
         or (
-            f"The highest priority is "
+            f"Your highest priority is "
             f"{weak_skills[0] if weak_skills else 'building a balanced baseline'}."
         )
     ).strip()
@@ -1784,18 +1553,11 @@ def ai_generate_study_plan():
     performance = study_plan_performance_context()
     fingerprints = recent_fingerprint_summary()
 
-    weekday_minutes = int(
-        st.session_state.get("weekday_minutes", 45)
-    )
-    weekend_minutes = int(
-        st.session_state.get("weekend_minutes", 120)
-    )
+    weekday_minutes = int(st.session_state.get("weekday_minutes", 45))
+    weekend_minutes = int(st.session_state.get("weekend_minutes", 120))
     rest_day = st.session_state.get("rest_day", "Sunday")
 
-    daily_budgets = {
-        day: plan_day_budget(day)
-        for day in PLAN_DAYS
-    }
+    daily_budgets = {day: plan_day_budget(day) for day in PLAN_DAYS}
 
     score_gap = max(
         0,
@@ -1804,15 +1566,13 @@ def ai_generate_study_plan():
     )
 
     available_skills = sorted(
-        {question.get("skill", "") for question in QUESTIONS}
-        - {""}
+        {question.get("skill", "") for question in QUESTIONS} - {""}
     )
 
     context = {
         "target_score": st.session_state.target_score,
         "current_performance_estimate": (
-            st.session_state.predicted_score
-            or "not yet estimated"
+            st.session_state.predicted_score or "not yet estimated"
         ),
         "score_gap": score_gap,
         "days_until_sat": days_until_sat(),
@@ -1823,11 +1583,15 @@ def ai_generate_study_plan():
         "exact_daily_budgets": daily_budgets,
         "performance_by_skill": performance,
         "recent_error_fingerprints": fingerprints,
+        "personal_circumstances": (
+            (st.session_state.get("study_circumstances") or "").strip()
+            or "None shared."
+        ),
         "available_question_bank_skills": available_skills,
     }
 
     system_prompt = """
-You are SATSam's expert instructional planner.
+You are Sam, SATSam's expert and caring instructional planner.
 
 Create realistic digital SAT study schedules. Every recommendation must be
 specific, measurable, educationally justified, and possible within the stated
@@ -1858,7 +1622,16 @@ Planning rules:
 12. Include both Reading and Writing and Math during the week.
 13. Make the preferred lighter day genuinely lighter and lower-pressure.
 14. Avoid generic descriptions such as "practice reading" or "review math."
-15. Respond only with valid JSON and no Markdown.
+15. If the student has shared personal circumstances that make studying harder
+    (a job, limited money, caregiving, shared devices, unreliable internet, and
+    so on), treat those as HARD CONSTRAINTS. Never assume paid tutors, paid prep
+    books, or expensive tools; lean on free and offline-friendly practice, keep
+    hard days genuinely short, and keep a compassionate, non-judgmental tone that
+    respects everything else they are carrying.
+16. Write every human-facing field (strategy, rationale, task, weekly_focus, and
+    block descriptions) warmly and directly to the student using "you," like a
+    mentor who is on their side and proud of them for showing up. Never clinical.
+17. Respond only with valid JSON and no Markdown.
 """.strip()
 
     user_prompt = f"""
@@ -1868,7 +1641,7 @@ STUDENT PROFILE
 Return exactly this JSON structure:
 
 {{
-  "strategy": "Three specific sentences explaining why the week is organized this way.",
+  "strategy": "Three specific, warm sentences explaining why the week is organized this way for this student.",
   "days": [
     {{
       "day": "Monday",
@@ -1876,7 +1649,7 @@ Return exactly this JSON structure:
       "section": "math, reading_writing, or mixed",
       "focus": "An exact SAT skill from the provided question-bank skills",
       "task": "A concise but specific session title",
-      "rationale": "Why this work was selected for this student on this day",
+      "rationale": "Why this work was chosen for you on this day",
       "completion_check": "A measurable condition for finishing the session",
       "blocks": [
         {{
@@ -1901,13 +1674,11 @@ Requirements:
 - Use a positive question_count for drills and modules.
 - A Reading and Writing timed module is exactly 32 minutes and 27 questions.
 - A Math timed module is exactly 35 minutes and 22 questions.
+- Honor the student's personal_circumstances above as hard constraints.
 """.strip()
 
     ok, text = ollama_chat(
-        system_prompt,
-        user_prompt,
-        temperature=0.25,
-        force_json=True,
+        system_prompt, user_prompt, temperature=0.25, force_json=True
     )
 
     if not ok:
@@ -1916,18 +1687,12 @@ Requirements:
     data = parse_json_response(text)
 
     if not isinstance(data, dict):
-        return (
-            False,
-            "The model returned an unexpected format. Please try again.",
-        )
+        return False, "The model returned an unexpected format. Please try again."
 
     normalized_plan = normalize_study_plan(data)
 
     if len(normalized_plan.get("days", [])) != 7:
-        return (
-            False,
-            "SATSam could not build all seven study days.",
-        )
+        return False, "SATSam could not build all seven study days."
 
     return True, normalized_plan
 
@@ -2027,10 +1792,6 @@ def check_answer(question, user_answer) -> bool:
 
 # ============================================================
 # METRICS DERIVED FROM ANSWER HISTORY
-#
-# Every dashboard number below is computed from the running
-# history of answered questions, so the home page, insights,
-# and sidebar all reflect real performance.
 # ============================================================
 
 def skill_stats(history):
@@ -2175,7 +1936,15 @@ DEFAULT_STATE = {
     "ai_temperature": 0.7,
     "explanation_style": "Concise and strategic",
     "coach_personality": "Warm and focused",
-    "ai_hints": True,
+
+    # Personal circumstances that make studying harder (feeds the planner).
+    "study_circumstances": "",
+
+    # Free-form "Chat with Sam" conversation state (session only).
+    "chat_open": False,
+    "chat_messages": [],
+    "chat_context": None,
+    "chat_pending": None,
 
     # The most recent AI-generated study plan (persisted to settings).
     "ai_study_plan": None,
@@ -2195,8 +1964,7 @@ for key, value in DEFAULT_STATE.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-# Pre-fill the Practice setup widgets from the saved session defaults. These
-# apply on each fresh launch; per-session changes made in Practice still stick.
+# Pre-fill the Practice setup widgets from the saved session defaults.
 for widget_key, default_value in {
     "practice_subject": st.session_state.default_practice_subject,
     "practice_focus": "Highest-impact weakness",
@@ -2208,8 +1976,7 @@ for widget_key, default_value in {
         st.session_state[widget_key] = default_value
 
 # Navigation requested by a button on the previous run. This has to
-# be applied *before* the sidebar radio is created, because Streamlit
-# refuses to let a widget's key be modified after instantiation.
+# be applied *before* the sidebar radio is created.
 if "pending_page" in st.session_state:
     st.session_state.page = st.session_state.pop("pending_page")
 
@@ -2231,13 +1998,12 @@ def start_session(config):
     st.session_state.session_last_answer = None
     st.session_state.session_last_correct = None
 
-    # Let the model prioritize which weak skills to target this session. When the
-    # AI is off or unreachable, pick_next falls back to the accuracy heuristic.
+    # Let the model prioritize which weak skills to target this session.
     st.session_state.ai_focus_skills = []
     if (st.session_state.get("ai_enabled")
             and config["focus"] == "Highest-impact weakness"
             and st.session_state.history):
-        with st.spinner("Sam is analyzing your weak spots…"):
+        with st.spinner("Sam is looking at where you can gain the most…"):
             st.session_state.ai_focus_skills = ai_recommend_focus_skills(
                 st.session_state.history
             )
@@ -2393,12 +2159,10 @@ def empty_state(message):
 STYLES = """
 <style>
 
-/* ----- IMPORT FONT ----- */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap');
 
-/* ----- ROOT DESIGN TOKENS ----- */
 :root {
-    --cream: #F8F3EA;
+    --cream: #F7F1E6;
     --paper: #FFFDF8;
     --paper-muted: #F3EDE3;
     --ink: #28241F;
@@ -2416,23 +2180,22 @@ STYLES = """
     --shadow-small: 0 5px 16px rgba(70, 53, 38, 0.06);
 }
 
-/* ----- APP FOUNDATION ----- */
 html, body, [class*="css"] {
     font-family: "DM Sans", sans-serif;
     color: var(--ink);
 }
 .stApp {
     background:
-        radial-gradient(circle at 84% 4%, rgba(217, 164, 65, 0.13), transparent 24rem),
-        radial-gradient(circle at 10% 95%, rgba(111, 133, 111, 0.12), transparent 28rem),
+        radial-gradient(circle at 84% 4%, rgba(217, 164, 65, 0.12), transparent 24rem),
+        radial-gradient(circle at 10% 95%, rgba(111, 133, 111, 0.11), transparent 28rem),
         var(--cream);
 }
 .block-container {
-    max-width: 1380px;
-    padding-top: 2rem;
-    padding-bottom: 4rem;
-    padding-left: 2.7rem;
-    padding-right: 2.7rem;
+    max-width: 1340px;
+    padding-top: 2.2rem;
+    padding-bottom: 5rem;
+    padding-left: 3rem;
+    padding-right: 3rem;
 }
 h1, h2, h3 { color: var(--ink); }
 p { color: var(--muted); }
@@ -2441,7 +2204,6 @@ div[data-testid="stDecoration"],
 #MainMenu,
 footer { visibility: hidden; }
 
-/* Any HTML that still slips through markdown should not become a dark block. */
 .stApp pre, .stApp code {
     background: var(--paper-muted);
     color: var(--ink);
@@ -2481,9 +2243,9 @@ section[data-testid="stSidebar"] > div { padding-top: 1.25rem; }
     letter-spacing: 0.12em;
     font-size: 0.65rem;
     font-weight: 700;
-    margin: 0.8rem 0 0.5rem 0.25rem;
+    margin: 1.1rem 0 0.5rem 0.25rem;
 }
-section[data-testid="stSidebar"] div[role="radiogroup"] { gap: 0.25rem; }
+section[data-testid="stSidebar"] div[role="radiogroup"] { gap: 0.3rem; }
 section[data-testid="stSidebar"] label[data-baseweb="radio"] {
     background: transparent;
     padding: 0.72rem 0.8rem;
@@ -2539,9 +2301,9 @@ section[data-testid="stSidebar"] label[data-baseweb="radio"] > div:first-child {
 .hero {
     position: relative;
     overflow: hidden;
-    min-height: 252px;
-    padding: 2.5rem 2.65rem;
-    margin-bottom: 1.65rem;
+    min-height: 240px;
+    padding: 2.6rem 2.7rem;
+    margin-bottom: 1.9rem;
     border-radius: 26px;
     background: linear-gradient(125deg, rgba(255, 253, 248, 0.98), rgba(244, 226, 210, 0.95));
     border: 1px solid rgba(215, 193, 173, 0.8);
@@ -2552,18 +2314,18 @@ section[data-testid="stSidebar"] label[data-baseweb="radio"] > div:first-child {
     position: absolute;
     right: -70px;
     top: -100px;
-    width: 380px;
-    height: 380px;
+    width: 360px;
+    height: 360px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(201, 105, 74, 0.25) 0%, rgba(217, 164, 65, 0.12) 44%, transparent 70%);
+    background: radial-gradient(circle, rgba(201, 105, 74, 0.2) 0%, rgba(217, 164, 65, 0.1) 44%, transparent 70%);
 }
 .hero::before {
     content: "✦";
     position: absolute;
-    right: 128px;
-    top: 46px;
-    font-size: 5.8rem;
-    color: rgba(169, 80, 54, 0.16);
+    right: 132px;
+    top: 52px;
+    font-size: 5rem;
+    color: rgba(169, 80, 54, 0.1);
     transform: rotate(12deg);
     z-index: 1;
 }
@@ -2584,9 +2346,9 @@ section[data-testid="stSidebar"] label[data-baseweb="radio"] > div:first-child {
 }
 .hero h1 {
     font-family: "Newsreader", serif;
-    font-size: clamp(2.7rem, 5vw, 4.35rem);
-    line-height: 0.98;
-    letter-spacing: -0.045em;
+    font-size: clamp(2.6rem, 5vw, 4.1rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
     margin: 0;
     max-width: 760px;
 }
@@ -2595,15 +2357,15 @@ section[data-testid="stSidebar"] label[data-baseweb="radio"] > div:first-child {
     max-width: 610px;
     font-size: 1rem;
     line-height: 1.65;
-    margin: 1rem 0 0 0;
+    margin: 1.1rem 0 0 0;
     color: #6F665B;
 }
-.hero-chips { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 1.35rem; }
+.hero-chips { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 1.5rem; }
 .hero-chip {
     background: rgba(255, 253, 248, 0.7);
     border: 1px solid rgba(193, 169, 149, 0.5);
     border-radius: 999px;
-    padding: 0.48rem 0.75rem;
+    padding: 0.48rem 0.85rem;
     color: #655D53;
     font-size: 0.77rem;
     font-weight: 600;
@@ -2615,7 +2377,7 @@ section[data-testid="stSidebar"] label[data-baseweb="radio"] > div:first-child {
     background: rgba(255, 253, 248, 0.91);
     border: 1px solid var(--border);
     border-radius: 19px;
-    padding: 1.2rem;
+    padding: 1.3rem;
     box-shadow: var(--shadow-small);
     transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
@@ -2644,7 +2406,7 @@ section[data-testid="stSidebar"] label[data-baseweb="radio"] > div:first-child {
 .metric-detail { color: #8A8176; font-size: 0.72rem; margin-top: 0.55rem; }
 
 /* ----- GENERAL CARDS AND HEADINGS ----- */
-.section-heading { margin: 2.25rem 0 1rem 0; }
+.section-heading { margin: 2.9rem 0 1.15rem 0; }
 .section-heading .eyebrow {
     color: var(--terracotta-dark);
     text-transform: uppercase;
@@ -2666,7 +2428,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     border-radius: 21px;
     box-shadow: var(--shadow-small);
 }
-div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
+div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.45rem; }
 .card-title {
     font-family: "Newsreader", serif;
     color: var(--ink);
@@ -2708,7 +2470,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
 .ai-insight {
     position: relative;
     overflow: hidden;
-    padding: 1.25rem;
+    padding: 1.35rem;
     border-radius: 17px;
     background: linear-gradient(135deg, var(--sage-soft), #EDF1E8);
     border: 1px solid #CFDBCB;
@@ -2722,16 +2484,16 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     font-weight: 800;
 }
 .ai-insight h3 { font-family: "Newsreader", serif; font-size: 1.45rem; margin: 0.4rem 0; }
-.ai-insight p { color: #5C685B; font-size: 0.8rem; line-height: 1.55; margin: 0; }
+.ai-insight p { color: #5C685B; font-size: 0.8rem; line-height: 1.6; margin: 0; }
 .coach-quote {
-    padding: 1.05rem 1.1rem;
+    padding: 1.1rem 1.15rem;
     border-left: 3px solid var(--mustard);
     border-radius: 0 14px 14px 0;
     background: var(--mustard-soft);
     color: #705D34;
     font-family: "Newsreader", serif;
     font-size: 1.05rem;
-    line-height: 1.45;
+    line-height: 1.5;
 }
 
 /* ----- PROGRESS RING ----- */
@@ -2825,11 +2587,11 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
 
 /* ----- PRACTICE QUESTION ----- */
 .practice-header {
-    padding: 1.2rem 1.3rem;
+    padding: 1.3rem 1.4rem;
     border-radius: 18px;
     background: linear-gradient(125deg, var(--terracotta-soft), #F6E8D7);
     border: 1px solid #E9CDBD;
-    margin-bottom: 1.2rem;
+    margin-bottom: 1.4rem;
 }
 .practice-header-label {
     color: var(--terracotta-dark);
@@ -2850,7 +2612,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     font-family: "Newsreader", serif;
     color: var(--ink);
     font-size: 1.45rem;
-    line-height: 1.4;
+    line-height: 1.42;
     margin: 0.7rem 0 1.1rem 0;
 }
 .formula-box {
@@ -2865,20 +2627,20 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     margin-bottom: 1rem;
 }
 .stimulus-box {
-    padding: 1rem 1.1rem;
+    padding: 1.05rem 1.15rem;
     background: var(--paper-muted);
     border: 1px solid var(--border);
     border-radius: 13px;
     color: var(--ink);
     font-size: 0.97rem;
-    line-height: 1.55;
-    margin: 0.2rem 0 1rem 0;
+    line-height: 1.6;
+    margin: 0.2rem 0 1.1rem 0;
 }
 .review-choice {
-    padding: 0.6rem 0.85rem;
+    padding: 0.65rem 0.9rem;
     border: 1px solid var(--border);
     border-radius: 11px;
-    margin-bottom: 0.45rem;
+    margin-bottom: 0.5rem;
     font-size: 0.9rem;
     color: var(--ink);
     background: var(--paper);
@@ -2898,15 +2660,12 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
 
 /* ----- STUDY PLAN DAYS ----- */
 .day-card {
-    padding: 1.1rem;
+    padding: 1.15rem;
     border-radius: 16px;
     background: var(--paper);
     border: 1px solid var(--border);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.8rem;
 }
-/* ============================================================
-   DETAILED AI STUDY PLAN
-   ============================================================ */
 
 .detailed-day-card {
     margin-bottom: 16px;
@@ -2914,18 +2673,14 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     border: 1px solid #ded2c2;
     border-radius: 17px;
     background: rgba(255, 253, 248, 0.92);
-    box-shadow:
-        0 8px 24px rgba(79, 59, 40, 0.055),
-        0 2px 5px rgba(79, 59, 40, 0.035);
+    box-shadow: 0 8px 24px rgba(79, 59, 40, 0.055), 0 2px 5px rgba(79, 59, 40, 0.035);
 }
-
 .detailed-day-top {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 14px;
 }
-
 .detailed-day-card .day-name {
     margin-bottom: 7px;
     color: #bf6444;
@@ -2934,7 +2689,6 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     letter-spacing: 0.12em;
     text-transform: uppercase;
 }
-
 .detailed-day-card .day-task {
     color: #2e211a;
     font-family: Georgia, "Times New Roman", serif;
@@ -2942,7 +2696,6 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     font-weight: 700;
     line-height: 1.3;
 }
-
 .plan-total-badge {
     flex: 0 0 auto;
     padding: 6px 9px;
@@ -2954,7 +2707,6 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     font-weight: 750;
     white-space: nowrap;
 }
-
 .plan-focus-label {
     display: inline-block;
     margin-top: 12px;
@@ -2965,21 +2717,18 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     font-size: 10px;
     font-weight: 750;
 }
-
 .plan-rationale {
     margin-top: 11px;
     color: #756457;
     font-size: 11px;
-    line-height: 1.55;
+    line-height: 1.6;
 }
-
 .plan-block-list {
     display: flex;
     flex-direction: column;
     gap: 9px;
     margin-top: 15px;
 }
-
 .plan-block {
     display: grid;
     grid-template-columns: 46px minmax(0, 1fr);
@@ -2989,7 +2738,6 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     border-radius: 12px;
     background: #fbf7f0;
 }
-
 .plan-block-time {
     display: flex;
     align-items: center;
@@ -3002,25 +2750,19 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     font-weight: 850;
     text-align: center;
 }
-
-.plan-block-content {
-    min-width: 0;
-}
-
+.plan-block-content { min-width: 0; }
 .plan-block-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
 }
-
 .plan-block-title {
     color: #413027;
     font-size: 11px;
     font-weight: 800;
     line-height: 1.35;
 }
-
 .plan-block-questions {
     flex: 0 0 auto;
     padding: 3px 6px;
@@ -3031,14 +2773,12 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     font-weight: 800;
     white-space: nowrap;
 }
-
 .plan-block-description {
     margin-top: 4px;
     color: #75675d;
     font-size: 9.5px;
-    line-height: 1.5;
+    line-height: 1.55;
 }
-
 .plan-day-footer {
     display: flex;
     flex-direction: column;
@@ -3050,20 +2790,10 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div { padding: 1.3rem; }
     font-size: 9px;
     line-height: 1.45;
 }
-
 @media (max-width: 900px) {
-    .detailed-day-top {
-        flex-direction: column;
-    }
-
-    .plan-block {
-        grid-template-columns: 42px minmax(0, 1fr);
-    }
-
-    .plan-block-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+    .detailed-day-top { flex-direction: column; }
+    .plan-block { grid-template-columns: 42px minmax(0, 1fr); }
+    .plan-block-header { align-items: flex-start; flex-direction: column; }
 }
 .day-name {
     color: var(--terracotta-dark);
@@ -3132,8 +2862,39 @@ div[data-testid="stMain"] label[data-baseweb="radio"]:has(input:checked) {
     background: #FFF7F2;
 }
 
+/* ----- CHAT WITH SAM ----- */
+div[data-testid="stChatMessage"] {
+    background: transparent;
+}
+
 /* ----- STREAMLIT ALERTS ----- */
 div[data-testid="stAlert"] { border-radius: 14px; border: 1px solid var(--border); }
+
+/* ----- FLOATING CHAT LAUNCHER ----- */
+.st-key-floating_chat_btn {
+    position: fixed;
+    right: 26px;
+    bottom: 26px;
+    z-index: 1000;
+    width: auto;
+}
+.st-key-floating_chat_btn button {
+    width: 62px;
+    height: 62px;
+    min-height: 62px;
+    padding: 0;
+    border-radius: 50% !important;
+    font-size: 1.55rem;
+    background: var(--terracotta) !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: 0 12px 30px rgba(169, 80, 54, 0.4) !important;
+}
+.st-key-floating_chat_btn button:hover {
+    background: var(--terracotta-dark) !important;
+    transform: translateY(-3px) !important;
+    color: #fff !important;
+}
 
 /* ----- RESPONSIVE ----- */
 @media (max-width: 900px) {
@@ -3146,6 +2907,496 @@ div[data-testid="stAlert"] { border-radius: 14px; border: 1px solid var(--border
 """
 
 render_html(STYLES)
+
+
+# ============================================================
+# PERSISTENT FOCUS TIMER (shared template)
+#
+# One HTML/JS timer, rendered full-size on the Focus Timer page
+# and as a compact widget in the sidebar on every other page.
+# Both read and write the same localStorage key, so a session
+# started anywhere stays visible everywhere.
+# ============================================================
+
+FOCUS_TIMER_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; padding:0; background:transparent; font-family:Arial, sans-serif; color:#28241F; }
+  .timer-shell { width:100%; padding:22px 18px 10px 18px; text-align:center; }
+  .timer-ring { width:230px; height:230px; margin:0 auto; position:relative; display:flex; align-items:center; justify-content:center; }
+  .timer-ring svg { position:absolute; width:230px; height:230px; transform:rotate(-90deg); }
+  .timer-ring circle { fill:none; stroke-width:10; }
+  .ring-background { stroke:#E9DFD4; }
+  .ring-progress { stroke:#C9694A; stroke-linecap:round; transition:stroke-dashoffset 0.3s linear; }
+  .timer-content { position:relative; z-index:2; }
+  .time-display { font-family:Georgia, serif; font-size:48px; font-weight:600; letter-spacing:-1px; color:#28241F; }
+  .timer-status { margin-top:7px; font-size:13px; font-weight:600; color:#746D63; }
+  .button-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; max-width:520px; margin:24px auto 0 auto; }
+  button { min-height:44px; border-radius:12px; border:1px solid #E6DDD1; font-size:13px; font-weight:700; cursor:pointer; transition:transform 0.15s ease, background 0.15s ease; }
+  button:hover { transform:translateY(-1px); }
+  .start-button { color:white; background:#C9694A; border-color:#C9694A; }
+  .start-button:hover { background:#A95036; }
+  .pause-button, .reset-button { color:#28241F; background:#FFFDF8; }
+  .pause-button:hover, .reset-button:hover { background:#F7EFE6; }
+  .session-message { min-height:22px; margin-top:18px; font-size:13px; font-weight:600; color:#6F856F; }
+  .tip { max-width:520px; margin:16px auto 0 auto; padding:13px 15px; border-radius:12px; background:#F5E7BC; color:#705D34; font-size:12px; line-height:1.5; text-align:left; }
+  @media (max-width:520px) {
+    .timer-ring, .timer-ring svg { width:190px; height:190px; }
+    .time-display { font-size:40px; }
+    .button-row { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="timer-shell">
+    <div class="timer-ring">
+      <svg viewBox="0 0 240 240">
+        <circle class="ring-background" cx="120" cy="120" r="104"></circle>
+        <circle id="progressCircle" class="ring-progress" cx="120" cy="120" r="104"></circle>
+      </svg>
+      <div class="timer-content">
+        <div id="timeDisplay" class="time-display">__LENGTH__:00</div>
+        <div id="timerStatus" class="timer-status">Ready to focus</div>
+      </div>
+    </div>
+    <div class="button-row">
+      <button id="startButton" class="start-button" onclick="startTimer()">Start</button>
+      <button id="pauseButton" class="pause-button" onclick="pauseTimer()">Pause</button>
+      <button class="reset-button" onclick="resetTimer()">Reset</button>
+    </div>
+    <div id="sessionMessage" class="session-message"></div>
+    <div class="tip">Keep only what you need for this session open. When the timer ends, take a short, kind break before starting another focused block.</div>
+  </div>
+  <script>
+    const storageKey = "satsam_focus_timer_v2";
+    const selectedDuration = __SECONDS__;
+    const timeDisplay = document.getElementById("timeDisplay");
+    const timerStatus = document.getElementById("timerStatus");
+    const sessionMessage = document.getElementById("sessionMessage");
+    const startButton = document.getElementById("startButton");
+    const progressCircle = document.getElementById("progressCircle");
+    const radius = 104;
+    const circumference = 2 * Math.PI * radius;
+    progressCircle.style.strokeDasharray = circumference;
+    let timerInterval = null;
+    let timerState = { duration: selectedDuration, remaining: selectedDuration, running: false, completed: false, endTime: null };
+    function saveState() { localStorage.setItem(storageKey, JSON.stringify(timerState)); }
+    function loadState() {
+      const savedState = localStorage.getItem(storageKey);
+      if (!savedState) { saveState(); return; }
+      try {
+        const p = JSON.parse(savedState);
+        timerState = {
+          duration: Number(p.duration) || selectedDuration,
+          remaining: Number(p.remaining) || selectedDuration,
+          running: Boolean(p.running),
+          completed: Boolean(p.completed),
+          endTime: p.endTime ? Number(p.endTime) : null
+        };
+        if (!timerState.running && !timerState.completed && timerState.remaining === timerState.duration && timerState.duration !== selectedDuration) {
+          timerState.duration = selectedDuration;
+          timerState.remaining = selectedDuration;
+          timerState.endTime = null;
+          saveState();
+        }
+      } catch (error) {
+        timerState = { duration: selectedDuration, remaining: selectedDuration, running: false, completed: false, endTime: null };
+        saveState();
+      }
+    }
+    function calculateRemainingTime() {
+      if (timerState.running && timerState.endTime) {
+        timerState.remaining = Math.max(0, Math.ceil((timerState.endTime - Date.now()) / 1000));
+      }
+      return timerState.remaining;
+    }
+    function formatTime(totalSeconds) {
+      const safeSeconds = Math.max(0, totalSeconds);
+      const minutes = Math.floor(safeSeconds / 60);
+      const seconds = safeSeconds % 60;
+      return String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+    }
+    function updateDisplay() {
+      const remaining = calculateRemainingTime();
+      timeDisplay.textContent = formatTime(remaining);
+      const duration = Math.max(timerState.duration, 1);
+      const elapsed = duration - remaining;
+      const progress = Math.min(Math.max(elapsed / duration, 0), 1);
+      progressCircle.style.strokeDashoffset = circumference * progress;
+      if (timerState.completed) {
+        timerStatus.textContent = "Session complete";
+        sessionMessage.textContent = "Wonderful focus. Take a short, intentional break.";
+        startButton.textContent = "Complete";
+      } else if (timerState.running) {
+        timerStatus.textContent = "Focus in progress";
+        sessionMessage.textContent = "";
+        startButton.textContent = "Running";
+      } else if (timerState.remaining < timerState.duration) {
+        timerStatus.textContent = "Session paused";
+        sessionMessage.textContent = "";
+        startButton.textContent = "Resume";
+      } else {
+        timerStatus.textContent = "Ready to focus";
+        sessionMessage.textContent = "";
+        startButton.textContent = "Start";
+      }
+    }
+    function startTimer() {
+      if (timerState.running || timerState.completed || timerState.remaining <= 0) { return; }
+      timerState.running = true;
+      timerState.endTime = Date.now() + timerState.remaining * 1000;
+      saveState(); updateDisplay(); beginInterval();
+    }
+    function pauseTimer() {
+      if (!timerState.running) { return; }
+      calculateRemainingTime();
+      timerState.running = false;
+      timerState.endTime = null;
+      clearTimerInterval(); saveState(); updateDisplay();
+    }
+    function resetTimer() {
+      clearTimerInterval();
+      timerState = { duration: selectedDuration, remaining: selectedDuration, running: false, completed: false, endTime: null };
+      saveState(); updateDisplay();
+    }
+    function completeTimer(playSound) {
+      clearTimerInterval();
+      timerState.remaining = 0;
+      timerState.running = false;
+      timerState.completed = true;
+      timerState.endTime = null;
+      saveState(); updateDisplay();
+      if (playSound) { playCompletionSound(); }
+    }
+    function clearTimerInterval() {
+      if (timerInterval !== null) { clearInterval(timerInterval); timerInterval = null; }
+    }
+    function beginInterval() {
+      clearTimerInterval();
+      timerInterval = setInterval(() => {
+        const remaining = calculateRemainingTime();
+        if (remaining <= 0) { completeTimer(true); return; }
+        saveState(); updateDisplay();
+      }, 250);
+    }
+    function playCompletionSound() {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        const audioContext = new AudioContextClass();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode); gainNode.connect(audioContext.destination);
+        oscillator.frequency.value = 660; oscillator.type = "sine";
+        gainNode.gain.setValueAtTime(0.14, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.2);
+        oscillator.start(); oscillator.stop(audioContext.currentTime + 1.2);
+      } catch (error) {}
+    }
+    loadState();
+    if (timerState.running && timerState.endTime) {
+      calculateRemainingTime();
+      if (timerState.remaining <= 0) { completeTimer(false); } else { saveState(); updateDisplay(); beginInterval(); }
+    } else { updateDisplay(); }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        if (timerState.running && timerState.endTime) {
+          calculateRemainingTime();
+          if (timerState.remaining <= 0) { completeTimer(false); } else { updateDisplay(); beginInterval(); }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+"""
+
+
+MINI_TIMER_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; padding:0; background:transparent; font-family:Arial, sans-serif; color:#28241F; }
+  .mini { padding:2px 2px 6px 2px; }
+  .mini-top { display:flex; align-items:center; gap:11px; }
+  .mini-ring { position:relative; width:62px; height:62px; flex:0 0 62px; }
+  .mini-ring svg { position:absolute; width:62px; height:62px; transform:rotate(-90deg); }
+  .mini-ring circle { fill:none; stroke-width:6; }
+  .mini-bg { stroke:#E4DACE; }
+  .mini-fg { stroke:#C9694A; stroke-linecap:round; transition:stroke-dashoffset 0.3s linear; }
+  .mini-time { font-family:Georgia, serif; font-size:19px; font-weight:600; line-height:1; color:#28241F; }
+  .mini-status { font-size:11px; color:#8B8175; margin-top:4px; font-weight:600; }
+  .mini-btns { display:flex; gap:6px; margin-top:11px; }
+  .mini-btns button { flex:1; min-height:31px; border-radius:9px; border:1px solid #E0D5C7; background:#FFFDF8; color:#28241F; font-size:11px; font-weight:700; cursor:pointer; }
+  .mini-btns button:hover { background:#F7EFE6; }
+  .mini-btns .go { background:#C9694A; color:#fff; border-color:#C9694A; }
+  .mini-btns .go:hover { background:#A95036; }
+</style>
+</head>
+<body>
+  <div class="mini">
+    <div class="mini-top">
+      <div class="mini-ring">
+        <svg viewBox="0 0 62 62">
+          <circle class="mini-bg" cx="31" cy="31" r="27"></circle>
+          <circle id="mfg" class="mini-fg" cx="31" cy="31" r="27"></circle>
+        </svg>
+      </div>
+      <div>
+        <div id="mtime" class="mini-time">__LENGTH__:00</div>
+        <div id="mstatus" class="mini-status">Ready</div>
+      </div>
+    </div>
+    <div class="mini-btns">
+      <button id="mgo" class="go" onclick="mStart()">Start</button>
+      <button onclick="mPause()">Pause</button>
+      <button onclick="mReset()">Reset</button>
+    </div>
+  </div>
+  <script>
+    const KEY = "satsam_focus_timer_v2";
+    const SEL = __SECONDS__;
+    const R = 27, C = 2 * Math.PI * R;
+    const fg = document.getElementById("mfg");
+    fg.style.strokeDasharray = C;
+    const tEl = document.getElementById("mtime");
+    const sEl = document.getElementById("mstatus");
+    const goEl = document.getElementById("mgo");
+    let iv = null;
+    let s = { duration: SEL, remaining: SEL, running: false, completed: false, endTime: null };
+    function save() { localStorage.setItem(KEY, JSON.stringify(s)); }
+    function load() {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) { save(); return; }
+      try {
+        const p = JSON.parse(raw);
+        s = {
+          duration: Number(p.duration) || SEL,
+          remaining: Number(p.remaining) || SEL,
+          running: Boolean(p.running),
+          completed: Boolean(p.completed),
+          endTime: p.endTime ? Number(p.endTime) : null
+        };
+        if (!s.running && !s.completed && s.remaining === s.duration && s.duration !== SEL) {
+          s.duration = SEL; s.remaining = SEL; s.endTime = null; save();
+        }
+      } catch (e) {
+        s = { duration: SEL, remaining: SEL, running: false, completed: false, endTime: null };
+        save();
+      }
+    }
+    function rem() {
+      if (s.running && s.endTime) { s.remaining = Math.max(0, Math.ceil((s.endTime - Date.now()) / 1000)); }
+      return s.remaining;
+    }
+    function fmt(x) {
+      x = Math.max(0, x);
+      const m = Math.floor(x / 60), ss = x % 60;
+      return String(m).padStart(2, "0") + ":" + String(ss).padStart(2, "0");
+    }
+    function draw() {
+      const r = rem();
+      tEl.textContent = fmt(r);
+      const d = Math.max(s.duration, 1);
+      const p = Math.min(Math.max((d - r) / d, 0), 1);
+      fg.style.strokeDashoffset = C * p;
+      if (s.completed) { sEl.textContent = "Complete"; goEl.textContent = "Done"; }
+      else if (s.running) { sEl.textContent = "Focusing…"; goEl.textContent = "Running"; }
+      else if (s.remaining < s.duration) { sEl.textContent = "Paused"; goEl.textContent = "Resume"; }
+      else { sEl.textContent = "Ready"; goEl.textContent = "Start"; }
+    }
+    function clr() { if (iv) { clearInterval(iv); iv = null; } }
+    function tick() {
+      clr();
+      iv = setInterval(() => {
+        const r = rem();
+        if (r <= 0) { done(true); return; }
+        save(); draw();
+      }, 250);
+    }
+    function mStart() {
+      if (s.running || s.completed || s.remaining <= 0) { return; }
+      s.running = true; s.endTime = Date.now() + s.remaining * 1000;
+      save(); draw(); tick();
+    }
+    function mPause() {
+      if (!s.running) { return; }
+      rem(); s.running = false; s.endTime = null; clr(); save(); draw();
+    }
+    function mReset() {
+      clr();
+      s = { duration: SEL, remaining: SEL, running: false, completed: false, endTime: null };
+      save(); draw();
+    }
+    function done(sound) {
+      clr(); s.remaining = 0; s.running = false; s.completed = true; s.endTime = null;
+      save(); draw(); if (sound) { beep(); }
+    }
+    function beep() {
+      try {
+        const A = window.AudioContext || window.webkitAudioContext;
+        const c = new A();
+        const o = c.createOscillator(), g = c.createGain();
+        o.connect(g); g.connect(c.destination);
+        o.frequency.value = 660; o.type = "sine";
+        g.gain.setValueAtTime(0.14, c.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 1.2);
+        o.start(); o.stop(c.currentTime + 1.2);
+      } catch (e) {}
+    }
+    load();
+    if (s.running && s.endTime) {
+      rem();
+      if (s.remaining <= 0) { done(false); } else { draw(); tick(); }
+    } else { draw(); }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && s.running && s.endTime) {
+        rem();
+        if (s.remaining <= 0) { done(false); } else { draw(); tick(); }
+      }
+    });
+  </script>
+</body>
+</html>
+"""
+
+
+def render_focus_timer(length):
+    length = int(length)
+    html = (
+        FOCUS_TIMER_TEMPLATE
+        .replace("__LENGTH__", str(length))
+        .replace("__SECONDS__", str(length * 60))
+    )
+    components.html(html, height=430, scrolling=False)
+
+
+def render_mini_timer():
+    length = int(st.session_state.get("timer_length", 25))
+    html = (
+        MINI_TIMER_TEMPLATE
+        .replace("__LENGTH__", str(length))
+        .replace("__SECONDS__", str(length * 60))
+    )
+    components.html(html, height=140, scrolling=False)
+
+
+# ============================================================
+# CHAT WITH SAM
+# ============================================================
+
+def open_question_chat(question, user_answer):
+    """Open the chat pre-grounded in a specific missed question."""
+    skill = question.get("skill", "this one")
+    st.session_state.chat_context = {
+        "question": question,
+        "user_answer": str(user_answer),
+    }
+    st.session_state.chat_messages = [
+        {
+            "role": "assistant",
+            "content": (
+                f"No worries at all — {skill} trips up plenty of people. "
+                "Tell me which part felt confusing, or just say \"walk me through "
+                "it\" and we'll take it one step at a time together."
+            ),
+        }
+    ]
+    st.session_state.chat_pending = None
+    st.session_state.chat_open = True
+
+
+@st.dialog("Chat with Sam ✦", width="large")
+def render_chat_dialog():
+    render_html(
+        '<div style="color: var(--muted); font-size: 0.85rem; '
+        'margin: -0.25rem 0 0.9rem 0;">Ask me anything — a concept you\'re stuck '
+        'on, how to plan your week, or a question you just missed. I\'m glad '
+        'you\'re here.</div>'
+    )
+
+    if st.session_state.get("chat_context"):
+        skill = st.session_state.chat_context.get("question", {}).get("skill", "")
+        if skill:
+            render_html(
+                f'<div style="display:inline-block; margin-bottom:0.9rem; '
+                f'padding:5px 11px; border-radius:999px; background:var(--sage-soft); '
+                f'color:#536853; font-size:0.7rem; font-weight:700;">'
+                f'Talking through: {esc(skill)}</div>'
+            )
+
+    # Conversation so far.
+    for message in st.session_state.get("chat_messages", []):
+        role = "user" if message["role"] == "user" else "assistant"
+        avatar = "🧑" if role == "user" else "✨"
+        with st.chat_message(role, avatar=avatar):
+            st.markdown(message["content"])
+
+    # Answer a pending message now, so the spinner shows inside the dialog.
+    pending = st.session_state.get("chat_pending")
+    if pending:
+        st.session_state.chat_pending = None
+        if st.session_state.get("ai_enabled"):
+            with st.chat_message("assistant", avatar="✨"):
+                with st.spinner("Sam is thinking…"):
+                    ok, reply = ollama_chat_multi(st.session_state.chat_messages)
+                if not ok or not reply:
+                    reply = (
+                        "I'm having trouble reaching your local AI model right now. "
+                        "Make sure Ollama is running, then try again — I'll be right "
+                        "here when you're ready."
+                    )
+                st.markdown(reply)
+        else:
+            reply = (
+                "The AI tutor is switched off at the moment. Flip it on in Settings "
+                "once your local Ollama model is running, and I'll be able to chat "
+                "with you here."
+            )
+            with st.chat_message("assistant", avatar="✨"):
+                st.markdown(reply)
+        st.session_state.chat_messages.append(
+            {"role": "assistant", "content": reply}
+        )
+
+    # Input.
+    with st.form("chat_form", clear_on_submit=True):
+        user_text = st.text_area(
+            "Your message",
+            placeholder="Message Sam…",
+            height=80,
+            label_visibility="collapsed",
+            key="chat_input_text",
+        )
+        sent = st.form_submit_button(
+            "Send", type="primary", use_container_width=True
+        )
+    if sent and user_text and user_text.strip():
+        st.session_state.chat_messages.append(
+            {"role": "user", "content": user_text.strip()}
+        )
+        st.session_state.chat_pending = user_text.strip()
+        st.rerun(scope="fragment")
+
+    st.write("")
+    close_col_a, close_col_b = st.columns(2)
+    with close_col_a:
+        if st.button("Clear chat", use_container_width=True, key="chat_clear"):
+            st.session_state.chat_messages = []
+            st.session_state.chat_context = None
+            st.session_state.chat_pending = None
+            st.rerun(scope="fragment")
+    with close_col_b:
+        if st.button("Close", type="primary", use_container_width=True,
+                     key="chat_close"):
+            st.session_state.chat_open = False
+            st.rerun()
 
 
 # ============================================================
@@ -3176,13 +3427,16 @@ with st.sidebar:
         label_visibility="collapsed",
     )
 
+    if st.button("💬  Chat with Sam", use_container_width=True,
+                 key="open_chat_sidebar"):
+        st.session_state.chat_open = True
+        st.rerun()
+
     render_html(
         f"""
         <div class="sidebar-card">
             <div class="sidebar-card-label">Next SAT</div>
-            <div class="sidebar-card-value">
-                {format_sat_date()}
-            </div>
+            <div class="sidebar-card-value">{format_sat_date()}</div>
             <div class="sidebar-card-detail">{days_until_sat()} days remaining</div>
             <div class="mini-progress">
                 <div class="mini-progress-fill" style="width: {prep_window_percent()}%;"></div>
@@ -3196,6 +3450,10 @@ with st.sidebar:
         """
     )
 
+    if page != "Focus Timer":
+        render_html('<div class="sidebar-label">Focus timer</div>')
+        render_mini_timer()
+
     st.write("")
 
     if st.button(
@@ -3205,6 +3463,19 @@ with st.sidebar:
     ):
         start_session(quick_session_config())
         go_to("Practice")
+
+
+# Floating "Chat with Sam" launcher + dialog, available on every page.
+if st.button("💬", key="floating_chat_btn", help="Chat with Sam"):
+    st.session_state.chat_open = True
+
+if st.session_state.get("chat_open"):
+    # Consume the "open" intent right away. Streamlit keeps the dialog open on
+    # its own after this call; interactions inside it rerun only the dialog
+    # (fragment scope). This way a full-script rerun from navigating tabs or
+    # dismissing the dialog won't re-open it.
+    st.session_state.chat_open = False
+    render_chat_dialog()
 
 
 # ============================================================
@@ -3242,7 +3513,6 @@ if page == "Home":
         """
     )
 
-    # ----- Predicted-score delta detail -----
     score_log = st.session_state.score_history
     if len(score_log) >= 2:
         delta = score_log[-1] - score_log[0]
@@ -3669,8 +3939,6 @@ elif page == "Practice":
 
             with question_col:
                 with st.container(border=True):
-                    # Before submitting, this is question (answered + 1). After
-                    # submitting, answered has been incremented to include it.
                     display_number = answered + 1 if not submitted else answered
                     render_html(
                         f'<div class="question-number">Question {display_number} of {count} · '
@@ -3689,7 +3957,6 @@ elif page == "Practice":
                     is_mcq = question["format"] == "mcq"
 
                     if not submitted:
-                        # ----- Input -----
                         if is_mcq:
                             choice_ids = [c["id"] for c in question["choices"]]
                             choice_text = {c["id"]: c["text"] for c in question["choices"]}
@@ -3758,7 +4025,6 @@ elif page == "Practice":
                                 st.rerun()
 
                     else:
-                        # ----- Answer review -----
                         last_answer = st.session_state.session_last_answer
                         last_correct = st.session_state.session_last_correct
 
@@ -3789,7 +4055,7 @@ elif page == "Practice":
                         if last_correct:
                             st.success("Correct — nicely done.")
                         else:
-                            st.error("Not quite. Sam is diagnosing the reasoning pattern behind this miss.")
+                            st.error("Not quite — and that's okay. Sam is looking at the reasoning behind this one.")
 
                             latest_attempt = (
                                 st.session_state.history[-1]
@@ -3819,9 +4085,6 @@ elif page == "Practice":
                             render_error_fingerprint(fingerprint)
 
                         if config.get("explain", True):
-                            # Prefer a fresh, catered explanation from the local
-                            # model; fall back to the bank's stored explanation if
-                            # the AI is off or unreachable.
                             explanation_text = question["explanation"]
                             explanation_label = "Sam's explanation"
                             if st.session_state.get("ai_enabled"):
@@ -3846,12 +4109,21 @@ elif page == "Practice":
                                 """
                             )
 
-                            # If they picked a specific wrong MCQ choice, surface
-                            # the rationale for that distractor.
                             if (not last_correct) and is_mcq:
                                 note = question.get("distractors", {}).get(last_answer)
                                 if note:
                                     st.caption(f"Why that option was tempting: {note}")
+
+                        # ----- Still confused? Talk it through with Sam -----
+                        if not last_correct:
+                            st.write("")
+                            if st.button(
+                                "Still not clicking? Talk it through with Sam ✦",
+                                use_container_width=True,
+                                key=f"chat_help_{question['id']}",
+                            ):
+                                open_question_chat(question, last_answer)
+                                st.rerun()
 
                         # ----- Advance -----
                         finishing = st.session_state.session_answered >= count
@@ -3859,7 +4131,8 @@ elif page == "Practice":
 
                         nav_col_1, nav_col_2 = st.columns([1, 1])
                         with nav_col_1:
-                            if st.button("Leave session", use_container_width=True):
+                            if st.button("Leave session", use_container_width=True,
+                                         key="leave_after_answer"):
                                 st.session_state.practice_phase = "setup"
                                 st.session_state.answer_submitted = False
                                 st.rerun()
@@ -3969,12 +4242,11 @@ elif page == "Practice":
                 )
             else:
                 verdict = (
-                    "A tougher round — that's where the learning is. Reviewing the "
-                    "explanations for the ones you missed is the highest-value move now."
+                    "A tougher round — that's exactly where the learning is. "
+                    "Reviewing the explanations for the ones you missed is the "
+                    "highest-value move right now."
                 )
 
-            # AI review of the whole session (cached per completed session so it
-            # is generated once, not on every rerun). Falls back to the verdict.
             review_text = verdict
             if st.session_state.get("ai_enabled"):
                 review_cache = st.session_state.setdefault("ai_review_cache", {})
@@ -4017,183 +4289,177 @@ elif page == "Practice":
 
 elif page == "Insights":
     history = st.session_state.history
-    has_data = len(history) > 0
-    stats = skill_stats(history)
 
     section_header(
-        "Learning intelligence",
-        "Your progress has a pattern",
-        "SATSam combines accuracy, pacing, and mistake type across your answers.",
+        "Insights",
+        "The story your practice is telling",
+        "Every number here comes straight from the questions you've answered.",
     )
 
-    math_score = _section_scaled(history, "math")
-    rw_score = _section_scaled(history, "reading_writing")
-
-    # Pacing: share of questions answered within their suggested time.
-    timed = [e for e in history if e.get("est")]
-    if timed:
-        pace = round(
-            100 * sum(1 for e in timed if e["seconds"] <= e["est"]) / len(timed)
-        )
-    else:
-        pace = None
-
-    metrics = st.columns(4)
-
-    with metrics[0]:
-        metric_card(
-            "Predicted score",
-            st.session_state.predicted_score if has_data else "—",
-            "Estimated from your answers" if has_data else "Awaiting data",
-            "↗",
-        )
-    with metrics[1]:
-        metric_card(
-            "Math",
-            math_score if math_score is not None else "—",
-            "Section estimate (200–800)",
-            "∑",
-        )
-    with metrics[2]:
-        metric_card(
-            "Reading & Writing",
-            rw_score if rw_score is not None else "—",
-            "Section estimate (200–800)",
-            "Aa",
-        )
-    with metrics[3]:
-        metric_card(
-            "Pacing",
-            f"{pace}%" if pace is not None else "—",
-            "Answered within suggested time",
-            "◷",
-        )
-
-    section_header(
-        "Score trajectory",
-        "How your estimate is moving",
-        "Your projection updates as SATSam gathers more evidence.",
-    )
-
-    chart_col, summary_col = st.columns([1.65, 0.85], gap="large")
-
-    with chart_col:
-        with st.container(border=True):
-            trajectory = list(st.session_state.score_history)
-            # Include the live estimate as the latest point.
-            if has_data and (not trajectory or trajectory[-1] != st.session_state.predicted_score):
-                trajectory = trajectory + [st.session_state.predicted_score]
-
-            if trajectory:
-                st.line_chart(
-                    {
-                        "Predicted score": trajectory,
-                        "Target score": [st.session_state.target_score] * len(trajectory),
-                    },
-                    height=330,
-                )
-                st.caption(
-                    "Each point marks your predicted score after a completed session."
-                )
-            else:
-                empty_state(
-                    "Complete a practice session and your score trajectory will "
-                    "start plotting here."
-                )
-
-    with summary_col:
-        if has_data:
-            diagnosis = (
-                f"You're averaging {accuracy()}% across "
-                f"{st.session_state.questions_solved} questions."
-            )
-            if math_score is not None and rw_score is not None:
-                if math_score >= rw_score:
-                    diagnosis += " Math is currently your stronger section."
-                else:
-                    diagnosis += " Reading and Writing is currently your stronger section."
-        else:
-            diagnosis = (
-                "Once you've answered some questions, SATSam will diagnose which "
-                "section and skills are driving your score."
-            )
-
-        render_html(
-            f"""
-            <div class="ai-insight">
-                <div class="ai-insight-label">Weekly diagnosis</div>
-                <h3>Where you stand</h3>
-                <p>{esc(diagnosis)}</p>
-            </div>
-            """
-        )
-
+    if not history:
         with st.container(border=True):
             render_html(
                 """
-                <div class="card-title">Score opportunity</div>
+                <div class="card-title">Nothing to chart just yet</div>
                 <div class="card-subtitle">
-                    Estimated points available toward your target
+                    Answer a handful of practice questions and your score
+                    trajectory, pacing, and skill map will start filling in here.
+                </div>
+                """
+            )
+        if st.button("Start practicing →", type="primary"):
+            start_session(quick_session_config())
+            go_to("Practice")
+    else:
+        math_score = _section_scaled(history, "math")
+        rw_score = _section_scaled(history, "reading_writing")
+        avg_seconds = (
+            sum(e["seconds"] for e in history) / len(history) if history else 0
+        )
+
+        metric_columns = st.columns(4)
+        with metric_columns[0]:
+            metric_card(
+                "Predicted score",
+                st.session_state.predicted_score,
+                f"Target is {st.session_state.target_score}",
+                "↗",
+            )
+        with metric_columns[1]:
+            metric_card(
+                "Math (est.)",
+                math_score if math_score is not None else "—",
+                "Scaled from your accuracy",
+                "∑",
+            )
+        with metric_columns[2]:
+            metric_card(
+                "Reading & Writing (est.)",
+                rw_score if rw_score is not None else "—",
+                "Scaled from your accuracy",
+                "✎",
+            )
+        with metric_columns[3]:
+            metric_card(
+                "Pacing",
+                f"{avg_seconds:.0f}s",
+                "Average time per question",
+                "◷",
+            )
+
+        section_header(
+            "Progress",
+            "Score trajectory",
+            "Your estimated total after each completed session.",
+        )
+
+        with st.container(border=True):
+            if len(st.session_state.score_history) >= 2:
+                st.line_chart(st.session_state.score_history)
+            else:
+                empty_state(
+                    "Finish at least two sessions and your trajectory will "
+                    "appear here."
+                )
+
+        # Weekly diagnosis + score opportunity.
+        diagnosis_col, opportunity_col = st.columns([1.4, 1], gap="large")
+
+        stats = skill_stats(history)
+        weak = [s for s, r in stats.items() if r["acc"] < 65]
+        strong = [s for s, r in stats.items() if r["acc"] >= 80]
+
+        with diagnosis_col:
+            if weak:
+                diagnosis = (
+                    "The clearest opportunity right now is "
+                    f"{weak[0]}"
+                    + (
+                        f", followed by {weak[1]}."
+                        if len(weak) > 1 else "."
+                    )
+                    + " Steady, focused reps on your softest skills tend to move "
+                    "your score faster than anything else."
+                )
+            else:
+                diagnosis = (
+                    "No skill is dragging right now — you're fairly even across "
+                    "the board. This is a great moment to push difficulty up a "
+                    "notch and build stamina."
+                )
+            render_html(
+                f"""
+                <div class="ai-insight">
+                    <div class="ai-insight-label">This week's diagnosis</div>
+                    <h3>Where your points are hiding</h3>
+                    <p>{esc(diagnosis)}</p>
                 </div>
                 """
             )
 
-            gap = max(0, st.session_state.target_score - st.session_state.predicted_score) if has_data else 0
-            st.metric(
-                "Gap to target",
-                f"+{gap} points" if has_data else "—",
-                "with current consistency" if has_data else "answer questions to estimate",
+        with opportunity_col:
+            gap = max(
+                0,
+                int(st.session_state.target_score)
+                - int(st.session_state.predicted_score or 0),
             )
+            with st.container(border=True):
+                metric_card(
+                    "Score opportunity",
+                    f"{gap} pts",
+                    "Between your estimate and your target",
+                    "◎",
+                )
 
-            prep = prep_window_percent() / 100
-            st.progress(prep)
-            st.caption(
-                f"You're {round(prep * 100)}% through your preparation window."
-            )
+        # Skill map.
+        section_header(
+            "Skill map",
+            "What's strong and what needs love",
+            "Grouped by your current accuracy on each skill.",
+        )
 
-    section_header(
-        "Skill map",
-        "Where your next points are hiding",
-        "Ranked by your accuracy on each skill you've practiced.",
-    )
+        weak_col, strong_col = st.columns(2, gap="large")
 
-    weak_col, strong_col = st.columns(2, gap="large")
+        with weak_col:
+            with st.container(border=True):
+                render_html(
+                    """
+                    <div class="card-title">Needs attention</div>
+                    <div class="card-subtitle">Skills under 65% accuracy</div>
+                    """
+                )
+                ranked_weak = sorted(
+                    ((s, r) for s, r in stats.items() if r["acc"] < 65),
+                    key=lambda kv: kv[1]["acc"],
+                )
+                if ranked_weak:
+                    for skill, record in ranked_weak:
+                        topic_row(skill, record["acc"],
+                                  status_for_accuracy(record["acc"]))
+                else:
+                    empty_state("Nothing under 65% — lovely work.")
 
-    ranked = sorted(stats.items(), key=lambda kv: kv[1]["acc"])
-
-    with weak_col:
-        with st.container(border=True):
-            render_html(
-                """
-                <div class="card-title">Highest-impact opportunities</div>
-                <div class="card-subtitle">Skills worth prioritizing next</div>
-                """
-            )
-            weak_list = [item for item in ranked if item[1]["acc"] < 80][:3]
-            if weak_list:
-                for skill, record in weak_list:
-                    topic_row(skill, record["acc"], status_for_accuracy(record["acc"]))
-            elif stats:
-                empty_state("No weak spots yet — everything you've practiced is at 80% or above.")
-            else:
-                empty_state("Practice a few questions to reveal your weakest skills.")
-
-    with strong_col:
-        with st.container(border=True):
-            render_html(
-                """
-                <div class="card-title">Reliable strengths</div>
-                <div class="card-subtitle">Skills you can trust under time pressure</div>
-                """
-            )
-            strong_list = [item for item in reversed(ranked) if item[1]["acc"] >= 80][:3]
-            if strong_list:
-                for skill, record in strong_list:
-                    topic_row(skill, record["acc"], status_for_accuracy(record["acc"]))
-            elif stats:
-                empty_state("No skill has reached 80% yet — keep practicing to build reliable strengths.")
-            else:
-                empty_state("Practice a few questions to reveal your strongest skills.")
+        with strong_col:
+            with st.container(border=True):
+                render_html(
+                    """
+                    <div class="card-title">Strengths to protect</div>
+                    <div class="card-subtitle">Skills at 80% accuracy or higher</div>
+                    """
+                )
+                ranked_strong = sorted(
+                    ((s, r) for s, r in stats.items() if r["acc"] >= 80),
+                    key=lambda kv: kv[1]["acc"],
+                    reverse=True,
+                )
+                if ranked_strong:
+                    for skill, record in ranked_strong:
+                        topic_row(skill, record["acc"],
+                                  status_for_accuracy(record["acc"]))
+                else:
+                    empty_state(
+                        "No skill is at 80% yet — keep going, you'll get there."
+                    )
 
 
 # ============================================================
@@ -4202,25 +4468,28 @@ elif page == "Insights":
 
 elif page == "Study Plan":
     section_header(
-        "Personalized planning",
-        "Build a plan that fits real life",
-        "SATSam balances urgency, weak areas, and available study time.",
+        "Study plan",
+        "A week built around your real life",
+        "Tell SATSam how much time you have and what you're working around, "
+        "and Sam will shape the week to fit.",
     )
 
-    settings_col, preview_col = st.columns([0.9, 1.5], gap="large")
+    prefs_col, generate_col = st.columns([1.3, 1], gap="large")
 
-    with settings_col:
+    with prefs_col:
         with st.container(border=True):
             render_html(
                 """
-                <div class="card-title">Plan preferences</div>
-                <div class="card-subtitle">Set realistic boundaries for your week</div>
+                <div class="card-title">Your week</div>
+                <div class="card-subtitle">
+                    These settings decide how much work lands on each day
+                </div>
                 """
             )
 
-            st.date_input("SAT date", key="sat_date")
+            st.date_input("Test date", key="sat_date")
 
-            st.number_input(
+            st.slider(
                 "Target score",
                 min_value=400,
                 max_value=1600,
@@ -4228,333 +4497,168 @@ elif page == "Study Plan":
                 key="target_score",
             )
 
-            weekday_minutes = st.slider(
-                "Weekday minutes",
+            st.slider(
+                "Weekday study minutes",
                 min_value=15,
-                max_value=120,
+                max_value=180,
                 step=5,
-                key="weekday_minutes",
                 value=45,
+                key="weekday_minutes",
             )
 
-            weekend_minutes = st.slider(
-                "Weekend minutes",
-                min_value=30,
+            st.slider(
+                "Weekend study minutes",
+                min_value=15,
                 max_value=240,
-                step=15,
-                key="weekend_minutes",
+                step=5,
                 value=120,
+                key="weekend_minutes",
             )
 
             st.selectbox(
                 "Preferred lighter day",
-                ["Friday", "Sunday", "Wednesday", "No lighter day"],
+                PLAN_DAYS + ["No lighter day"],
+                index=6,
                 key="rest_day",
+                help="Sam will keep this day shorter and lower-pressure.",
             )
 
-            plan_button_label = (
-                "Generate my plan with Sam"
-                if st.session_state.get("ai_enabled")
-                else "Regenerate my plan"
+    with generate_col:
+        with st.container(border=True):
+            render_html(
+                """
+                <div class="card-title">What makes studying hard right now?</div>
+                <div class="card-subtitle">
+                    Optional, and only ever used to make your plan kinder and more
+                    realistic
+                </div>
+                """
             )
+
+            st.text_area(
+                "Your circumstances",
+                key="study_circumstances",
+                height=120,
+                label_visibility="collapsed",
+                placeholder=(
+                    "e.g. I work weekday evenings, I can't afford prep books, I "
+                    "share one laptop with my family, my internet is unreliable."
+                ),
+            )
+            st.caption(
+                "Sam treats this as a hard constraint — no expensive tools, "
+                "genuinely shorter hard days, and free, offline-friendly practice "
+                "wherever possible. This stays on your own device."
+            )
+
+            st.write("")
+
             if st.button(
-                plan_button_label,
+                "Generate my plan with Sam →",
                 type="primary",
                 use_container_width=True,
             ):
-                if st.session_state.get("ai_enabled"):
+                if not st.session_state.get("ai_enabled"):
+                    st.warning(
+                        "The AI tutor is switched off. Turn it on in Settings "
+                        "(with your local Ollama model running) to generate a "
+                        "personalized plan."
+                    )
+                else:
                     with st.spinner("Sam is building your week…"):
                         ok, result = ai_generate_study_plan()
                     if ok:
                         st.session_state.ai_study_plan = result
                         try:
                             save_settings()
-                        except OSError as error:
-                            st.warning(
-                                f"Plan generated, but it couldn't be saved: {error}"
-                            )
-                        st.success(
-                            "Sam built a plan around your goals and weak spots."
-                        )
+                        except Exception:
+                            pass
+                        st.success("Your plan is ready — take a look below.")
                     else:
-                        st.error(f"Couldn't generate a plan: {result}")
-                else:
-                    st.success("Your plan was updated around your available time.")
+                        st.error(f"Sam couldn't build a plan: {result}")
 
-            if st.session_state.get("ai_study_plan"):
-                if st.button("Clear AI plan", use_container_width=True):
-                    st.session_state.ai_study_plan = None
-                    try:
-                        save_settings()
-                    except OSError:
-                        pass
-                    st.rerun()
+    plan = st.session_state.get("ai_study_plan")
 
-    with preview_col:
-        ai_plan = st.session_state.get("ai_study_plan")
+    if isinstance(plan, dict) and plan.get("days"):
+        render_html(
+            f"""
+            <div class="ai-insight" style="margin-top: 1.5rem;">
+                <div class="ai-insight-label">Sam's strategy for your week</div>
+                <h3>{esc(plan.get("weekly_focus", "Your focus this week"))}</h3>
+                <p>{to_html_block(plan.get("strategy", ""))}</p>
+            </div>
+            """
+        )
 
-        if ai_plan:
-            strategy = ai_plan.get("strategy") or ai_plan.get("weekly_focus") or (
-                "A plan built around your current weak spots and available time."
-            )
+        for day in plan["days"]:
+            blocks_html = ""
+            for block in day.get("blocks", []):
+                q_badge = (
+                    f'<span class="plan-block-questions">'
+                    f'{int(block.get("question_count", 0))} Q</span>'
+                    if block.get("question_count") else ""
+                )
+                blocks_html += (
+                    '<div class="plan-block">'
+                    f'<div class="plan-block-time">{int(block.get("minutes", 0))}<br>min</div>'
+                    '<div class="plan-block-content">'
+                    '<div class="plan-block-header">'
+                    f'<div class="plan-block-title">{esc(block.get("title", ""))}</div>'
+                    f'{q_badge}'
+                    '</div>'
+                    f'<div class="plan-block-description">{to_html_block(block.get("description", ""))}</div>'
+                    '</div></div>'
+                )
+
             render_html(
                 f"""
-                <div class="ai-insight">
-                    <div class="ai-insight-label">Sam's plan strategy</div>
-                    <h3>Your personalized week</h3>
-                    <p>{to_html_block(strategy)}</p>
+                <div class="detailed-day-card">
+                    <div class="detailed-day-top">
+                        <div>
+                            <div class="day-name">{esc(day.get("day", ""))}</div>
+                            <div class="day-task">{esc(day.get("task", ""))}</div>
+                            <div class="plan-focus-label">Focus: {esc(day.get("focus", ""))}</div>
+                        </div>
+                        <div class="plan-total-badge">{int(day.get("minutes", 0))} min</div>
+                    </div>
+                    <div class="plan-rationale">{to_html_block(day.get("rationale", ""))}</div>
+                    <div class="plan-block-list">{blocks_html}</div>
+                    <div class="plan-day-footer">
+                        <div>Done when: {esc(day.get("completion_check", ""))}</div>
+                    </div>
                 </div>
                 """
             )
-
-            days = ai_plan.get("days") or []
-            plan_left, plan_right = st.columns(2)
-
-            for index, day in enumerate(days):
-                if not isinstance(day, dict):
-                    continue
-
-                target_col = (
-                    plan_left
-                    if index % 2 == 0
-                    else plan_right
-                )
-
-                name = esc(
-                    day.get("day", f"Day {index + 1}")
-                )
-
-                minutes = int(day.get("minutes", 0) or 0)
-
-                task = esc(
-                    day.get("task")
-                    or day.get("focus")
-                    or "Focused SAT session"
-                )
-
-                focus = esc(
-                    day.get("focus")
-                    or "Balanced SAT practice"
-                )
-
-                rationale = to_html_block(
-                    day.get("rationale", "")
-                )
-
-                completion_check = to_html_block(
-                    day.get(
-                        "completion_check",
-                        "Complete every block and review all missed questions.",
-                    )
-                )
-
-                blocks = day.get("blocks") or []
-
-                block_html_parts = []
-
-                for block in blocks:
-                    if not isinstance(block, dict):
-                        continue
-
-                    block_minutes = int(
-                        block.get("minutes", 0) or 0
-                    )
-
-                    block_title = esc(
-                        block.get("title")
-                        or "Study block"
-                    )
-
-                    block_description = to_html_block(
-                        block.get("description", "")
-                    )
-
-                    question_count = int(
-                        block.get("question_count", 0) or 0
-                    )
-
-                    question_label = (
-                        f"""
-                        <span class="plan-block-questions">
-                            {question_count}
-                            question{"s" if question_count != 1 else ""}
-                        </span>
-                        """
-                        if question_count > 0
-                        else ""
-                    )
-
-                    block_html_parts.append(
-                        f"""
-                        <div class="plan-block">
-                            <div class="plan-block-time">
-                                {block_minutes} min
-                            </div>
-
-                            <div class="plan-block-content">
-                                <div class="plan-block-header">
-                                    <span class="plan-block-title">
-                                        {block_title}
-                                    </span>
-                                    {question_label}
-                                </div>
-
-                                <div class="plan-block-description">
-                                    {block_description}
-                                </div>
-                            </div>
-                        </div>
-                        """
-                    )
-
-                blocks_html = "".join(block_html_parts)
-
-                total_block_minutes = sum(
-                    int(block.get("minutes", 0) or 0)
-                    for block in blocks
-                    if isinstance(block, dict)
-                )
-
-                total_questions = sum(
-                    int(block.get("question_count", 0) or 0)
-                    for block in blocks
-                    if isinstance(block, dict)
-                )
-
-                question_summary = (
-                    f"{total_questions} total questions"
-                    if total_questions > 0
-                    else "Review-focused session"
-                )
-
-                with target_col:
-                    render_html(
-                        f"""
-                        <div class="detailed-day-card">
-                            <div class="detailed-day-top">
-                                <div>
-                                    <div class="day-name">
-                                        {name} · {minutes} min
-                                    </div>
-
-                                    <div class="day-task">
-                                        {task}
-                                    </div>
-                                </div>
-
-                                <div class="plan-total-badge">
-                                    {total_block_minutes}/{minutes} min
-                                </div>
-                            </div>
-
-                            <div class="plan-focus-label">
-                                Focus: {focus}
-                            </div>
-
-                            <div class="plan-rationale">
-                                {rationale}
-                            </div>
-
-                            <div class="plan-block-list">
-                                {blocks_html}
-                            </div>
-
-                            <div class="plan-day-footer">
-                                <span>{question_summary}</span>
-                                <span>✓ {completion_check}</span>
-                            </div>
-                        </div>
-                        """
-                    )
-
-            weekly_focus = ai_plan.get("weekly_focus")
-
-            if weekly_focus:
-                render_html(
-                    f"""
-                    <div class="coach-quote">
-                        <strong>Weekly objective:</strong>
-                        {to_html_block(weekly_focus)}
-                    </div>
-                    """
-                )
-
-            st.caption(
-                "This plan is saved with your preferences. Regenerate it whenever "
-                "your performance or schedule changes."
-            )
-
-        else:
-            light_day = round(weekday_minutes * 0.55 / 5) * 5
-            weekly_total = (weekday_minutes * 4) + light_day + weekend_minutes + 90
-
+    else:
+        # Simple starter framework shown before a plan is generated.
+        render_html(
+            """
+            <div class="section-heading" style="margin-top: 2rem;">
+                <div class="eyebrow">Starter framework</div>
+                <h2>A balanced default week</h2>
+                <p>Generate a plan above and Sam will personalize every day for you.</p>
+            </div>
+            """
+        )
+        starter = [
+            ("Monday", "Algebra foundations", "Warm up on your weakest math skill"),
+            ("Tuesday", "Reading & Writing", "Grammar conventions and boundaries"),
+            ("Wednesday", "Mixed timed set", "Short adaptive session under time"),
+            ("Thursday", "Problem-solving & data", "Charts, ratios, and word problems"),
+            ("Friday", "Reading inference", "Evidence and main-idea questions"),
+            ("Saturday", "Full practice block", "Longer session + full error review"),
+            ("Sunday", "Light review", "Redo missed questions, then rest"),
+        ]
+        for day_name, task, detail in starter:
             render_html(
-                """
-                <div class="ai-insight">
-                    <div class="ai-insight-label">Plan strategy</div>
-                    <h3>Prioritize math without neglecting reading.</h3>
-                    <p>
-                        This week allocates 55% of practice to math because it
-                        currently offers the largest point return. Reading remains
-                        frequent enough to preserve momentum.
-                    </p>
+                f"""
+                <div class="day-card">
+                    <div class="day-name">{esc(day_name)}</div>
+                    <div class="day-task">{esc(task)}</div>
+                    <div class="day-detail">{esc(detail)}</div>
                 </div>
                 """
             )
-
-            plan_left, plan_right = st.columns(2)
-
-            with plan_left:
-                render_html(
-                    f"""
-                    <div class="day-card">
-                        <div class="day-name">Monday · {weekday_minutes} min</div>
-                        <div class="day-task">Linear equations + guided practice</div>
-                        <div class="day-detail">8-minute lesson · 15 adaptive questions</div>
-                    </div>
-                    <div class="day-card">
-                        <div class="day-name">Tuesday · {weekday_minutes} min</div>
-                        <div class="day-task">Reading inference and evidence</div>
-                        <div class="day-detail">Two short passages · Mistake reflection</div>
-                    </div>
-                    <div class="day-card">
-                        <div class="day-name">Wednesday · {weekday_minutes} min</div>
-                        <div class="day-task">Timed mixed math module</div>
-                        <div class="day-detail">Test pacing · Calculator strategy</div>
-                    </div>
-                    <div class="day-card">
-                        <div class="day-name">Thursday · {weekday_minutes} min</div>
-                        <div class="day-task">Grammar precision</div>
-                        <div class="day-detail">Transitions · Sentence boundaries</div>
-                    </div>
-                    """
-                )
-
-            with plan_right:
-                render_html(
-                    f"""
-                    <div class="day-card">
-                        <div class="day-name">Friday · {light_day} min</div>
-                        <div class="day-task">Light review and confidence set</div>
-                        <div class="day-detail">Saved mistakes · Five mastered questions</div>
-                    </div>
-                    <div class="day-card">
-                        <div class="day-name">Saturday · {weekend_minutes} min</div>
-                        <div class="day-task">Full-length practice modules</div>
-                        <div class="day-detail">Timed conditions · Automated analysis</div>
-                    </div>
-                    <div class="day-card">
-                        <div class="day-name">Sunday · 90 min</div>
-                        <div class="day-task">Deep mistake review</div>
-                        <div class="day-detail">Diagnose patterns · Update next week's plan</div>
-                    </div>
-                    <div class="day-card">
-                        <div class="day-name">Weekly outcome</div>
-                        <div class="day-task">{weekly_total} focused minutes</div>
-                        <div class="day-detail">105 questions · 2 timed modules</div>
-                    </div>
-                    """
-                )
 
 
 # ============================================================
@@ -4563,735 +4667,29 @@ elif page == "Study Plan":
 
 elif page == "Focus Timer":
     section_header(
-        "Distraction-free study",
-        "One focused block at a time",
-        "Use a quiet timer for practice, review, or full modules.",
+        "Focus timer",
+        "Protect one honest block of attention",
+        "Start it here and it keeps running in the sidebar as you move around "
+        "the app.",
     )
 
-    timer_col, intention_col = st.columns([1.25, 0.75], gap="large")
+    timer_col, intention_col = st.columns([1.5, 1], gap="large")
 
     with timer_col:
         with st.container(border=True):
-            render_html(
-                """
-                <div class="card-title">Focus session</div>
-                <div class="card-subtitle">
-                    Stay with one clear task until the timer ends
-                </div>
-                """
-            )
-
-            timer_length = st.slider(
-                "Session length",
+            st.slider(
+                "Session length (minutes)",
                 min_value=5,
                 max_value=60,
-                value=25,
                 step=5,
+                value=25,
                 key="timer_length",
             )
-
-            timer_seconds = timer_length * 60
-
-            timer_html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-
-                <style>
-                    * {{
-                        box-sizing: border-box;
-                    }}
-
-                    body {{
-                        margin: 0;
-                        padding: 0;
-                        background: transparent;
-                        font-family: Arial, sans-serif;
-                        color: #28241F;
-                    }}
-
-                    .timer-shell {{
-                        width: 100%;
-                        padding: 22px 18px 10px 18px;
-                        text-align: center;
-                    }}
-
-                    .timer-ring {{
-                        width: 230px;
-                        height: 230px;
-                        margin: 0 auto;
-                        position: relative;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    }}
-
-                    .timer-ring svg {{
-                        position: absolute;
-                        width: 230px;
-                        height: 230px;
-                        transform: rotate(-90deg);
-                    }}
-
-                    .timer-ring circle {{
-                        fill: none;
-                        stroke-width: 10;
-                    }}
-
-                    .ring-background {{
-                        stroke: #E9DFD4;
-                    }}
-
-                    .ring-progress {{
-                        stroke: #C9694A;
-                        stroke-linecap: round;
-                        transition: stroke-dashoffset 0.3s linear;
-                    }}
-
-                    .timer-content {{
-                        position: relative;
-                        z-index: 2;
-                    }}
-
-                    .time-display {{
-                        font-family: Georgia, serif;
-                        font-size: 48px;
-                        font-weight: 600;
-                        letter-spacing: -1px;
-                        color: #28241F;
-                    }}
-
-                    .timer-status {{
-                        margin-top: 7px;
-                        font-size: 13px;
-                        font-weight: 600;
-                        color: #746D63;
-                    }}
-
-                    .button-row {{
-                        display: grid;
-                        grid-template-columns: 1fr 1fr 1fr;
-                        gap: 10px;
-                        max-width: 520px;
-                        margin: 24px auto 0 auto;
-                    }}
-
-                    button {{
-                        min-height: 44px;
-                        border-radius: 12px;
-                        border: 1px solid #E6DDD1;
-                        font-size: 13px;
-                        font-weight: 700;
-                        cursor: pointer;
-                        transition:
-                            transform 0.15s ease,
-                            background 0.15s ease;
-                    }}
-
-                    button:hover {{
-                        transform: translateY(-1px);
-                    }}
-
-                    .start-button {{
-                        color: white;
-                        background: #C9694A;
-                        border-color: #C9694A;
-                    }}
-
-                    .start-button:hover {{
-                        background: #A95036;
-                    }}
-
-                    .pause-button,
-                    .reset-button {{
-                        color: #28241F;
-                        background: #FFFDF8;
-                    }}
-
-                    .pause-button:hover,
-                    .reset-button:hover {{
-                        background: #F7EFE6;
-                    }}
-
-                    .session-message {{
-                        min-height: 22px;
-                        margin-top: 18px;
-                        font-size: 13px;
-                        font-weight: 600;
-                        color: #6F856F;
-                    }}
-
-                    .tip {{
-                        max-width: 520px;
-                        margin: 16px auto 0 auto;
-                        padding: 13px 15px;
-                        border-radius: 12px;
-                        background: #F5E7BC;
-                        color: #705D34;
-                        font-size: 12px;
-                        line-height: 1.5;
-                        text-align: left;
-                    }}
-
-                    @media (max-width: 520px) {{
-                        .timer-ring,
-                        .timer-ring svg {{
-                            width: 190px;
-                            height: 190px;
-                        }}
-
-                        .time-display {{
-                            font-size: 40px;
-                        }}
-
-                        .button-row {{
-                            grid-template-columns: 1fr;
-                        }}
-                    }}
-                </style>
-            </head>
-
-            <body>
-                <div class="timer-shell">
-                    <div class="timer-ring">
-                        <svg viewBox="0 0 240 240">
-                            <circle
-                                class="ring-background"
-                                cx="120"
-                                cy="120"
-                                r="104"
-                            ></circle>
-
-                            <circle
-                                id="progressCircle"
-                                class="ring-progress"
-                                cx="120"
-                                cy="120"
-                                r="104"
-                            ></circle>
-                        </svg>
-
-                        <div class="timer-content">
-                            <div id="timeDisplay" class="time-display">
-                                {timer_length}:00
-                            </div>
-
-                            <div id="timerStatus" class="timer-status">
-                                Ready to focus
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="button-row">
-                        <button
-                            id="startButton"
-                            class="start-button"
-                            onclick="startTimer()"
-                        >
-                            Start
-                        </button>
-
-                        <button
-                            id="pauseButton"
-                            class="pause-button"
-                            onclick="pauseTimer()"
-                        >
-                            Pause
-                        </button>
-
-                        <button
-                            class="reset-button"
-                            onclick="resetTimer()"
-                        >
-                            Reset
-                        </button>
-                    </div>
-
-                    <div
-                        id="sessionMessage"
-                        class="session-message"
-                    ></div>
-
-                    <div class="tip">
-                        Keep only the materials needed for this session open.
-                        When the timer ends, take a short break before starting
-                        another focused block.
-                    </div>
-                </div>
-
-                                <script>
-                    const storageKey = "satsam_focus_timer_v2";
-                    const selectedDuration = {timer_seconds};
-
-                    const timeDisplay =
-                        document.getElementById("timeDisplay");
-
-                    const timerStatus =
-                        document.getElementById("timerStatus");
-
-                    const sessionMessage =
-                        document.getElementById("sessionMessage");
-
-                    const startButton =
-                        document.getElementById("startButton");
-
-                    const progressCircle =
-                        document.getElementById("progressCircle");
-
-                    const radius = 104;
-                    const circumference = 2 * Math.PI * radius;
-
-                    progressCircle.style.strokeDasharray =
-                        circumference;
-
-                    let timerInterval = null;
-
-                    let timerState = {{
-                        duration: selectedDuration,
-                        remaining: selectedDuration,
-                        running: false,
-                        completed: false,
-                        endTime: null
-                    }};
-
-
-                    // -------------------------------------------------
-                    // LOCAL STORAGE
-                    // -------------------------------------------------
-
-                    function saveState() {{
-                        localStorage.setItem(
-                            storageKey,
-                            JSON.stringify(timerState)
-                        );
-                    }}
-
-
-                    function loadState() {{
-                        const savedState =
-                            localStorage.getItem(storageKey);
-
-                        if (!savedState) {{
-                            saveState();
-                            return;
-                        }}
-
-                        try {{
-                            const parsedState =
-                                JSON.parse(savedState);
-
-                            timerState = {{
-                                duration:
-                                    Number(parsedState.duration)
-                                    || selectedDuration,
-
-                                remaining:
-                                    Number(parsedState.remaining)
-                                    || selectedDuration,
-
-                                running:
-                                    Boolean(parsedState.running),
-
-                                completed:
-                                    Boolean(parsedState.completed),
-
-                                endTime:
-                                    parsedState.endTime
-                                    ? Number(parsedState.endTime)
-                                    : null
-                            }};
-
-                            /*
-                            If no session is active and the user changes
-                            the Streamlit duration slider, use the newly
-                            selected duration.
-                            */
-                            if (
-                                !timerState.running
-                                && !timerState.completed
-                                && timerState.remaining
-                                    === timerState.duration
-                                && timerState.duration
-                                    !== selectedDuration
-                            ) {{
-                                timerState.duration =
-                                    selectedDuration;
-
-                                timerState.remaining =
-                                    selectedDuration;
-
-                                timerState.endTime = null;
-
-                                saveState();
-                            }}
-
-                        }} catch (error) {{
-                            console.log(
-                                "Could not restore timer state.",
-                                error
-                            );
-
-                            timerState = {{
-                                duration: selectedDuration,
-                                remaining: selectedDuration,
-                                running: false,
-                                completed: false,
-                                endTime: null
-                            }};
-
-                            saveState();
-                        }}
-                    }}
-
-
-                    // -------------------------------------------------
-                    // TIME CALCULATIONS
-                    // -------------------------------------------------
-
-                    function calculateRemainingTime() {{
-                        if (
-                            timerState.running
-                            && timerState.endTime
-                        ) {{
-                            timerState.remaining = Math.max(
-                                0,
-                                Math.ceil(
-                                    (
-                                        timerState.endTime
-                                        - Date.now()
-                                    ) / 1000
-                                )
-                            );
-                        }}
-
-                        return timerState.remaining;
-                    }}
-
-
-                    function formatTime(totalSeconds) {{
-                        const safeSeconds =
-                            Math.max(0, totalSeconds);
-
-                        const minutes =
-                            Math.floor(safeSeconds / 60);
-
-                        const seconds =
-                            safeSeconds % 60;
-
-                        return (
-                            String(minutes).padStart(2, "0")
-                            + ":"
-                            + String(seconds).padStart(2, "0")
-                        );
-                    }}
-
-
-                    // -------------------------------------------------
-                    // DISPLAY
-                    // -------------------------------------------------
-
-                    function updateDisplay() {{
-                        const remaining =
-                            calculateRemainingTime();
-
-                        timeDisplay.textContent =
-                            formatTime(remaining);
-
-                        const duration =
-                            Math.max(timerState.duration, 1);
-
-                        const elapsed =
-                            duration - remaining;
-
-                        const progress =
-                            Math.min(
-                                Math.max(elapsed / duration, 0),
-                                1
-                            );
-
-                        progressCircle.style.strokeDashoffset =
-                            circumference * progress;
-
-                        if (timerState.completed) {{
-                            timerStatus.textContent =
-                                "Session complete";
-
-                            sessionMessage.textContent =
-                                "Excellent work. Take a short, "
-                                + "intentional break.";
-
-                            startButton.textContent =
-                                "Complete";
-
-                        }} else if (timerState.running) {{
-                            timerStatus.textContent =
-                                "Focus in progress";
-
-                            sessionMessage.textContent = "";
-
-                            startButton.textContent =
-                                "Running";
-
-                        }} else if (
-                            timerState.remaining
-                            < timerState.duration
-                        ) {{
-                            timerStatus.textContent =
-                                "Session paused";
-
-                            sessionMessage.textContent = "";
-
-                            startButton.textContent =
-                                "Resume";
-
-                        }} else {{
-                            timerStatus.textContent =
-                                "Ready to focus";
-
-                            sessionMessage.textContent = "";
-
-                            startButton.textContent =
-                                "Start";
-                        }}
-                    }}
-
-
-                    // -------------------------------------------------
-                    // TIMER CONTROLS
-                    // -------------------------------------------------
-
-                    function startTimer() {{
-                        if (
-                            timerState.running
-                            || timerState.completed
-                            || timerState.remaining <= 0
-                        ) {{
-                            return;
-                        }}
-
-                        timerState.running = true;
-
-                        timerState.endTime =
-                            Date.now()
-                            + timerState.remaining * 1000;
-
-                        saveState();
-                        updateDisplay();
-                        beginInterval();
-                    }}
-
-
-                    function pauseTimer() {{
-                        if (!timerState.running) {{
-                            return;
-                        }}
-
-                        calculateRemainingTime();
-
-                        timerState.running = false;
-                        timerState.endTime = null;
-
-                        clearTimerInterval();
-                        saveState();
-                        updateDisplay();
-                    }}
-
-
-                    function resetTimer() {{
-                        clearTimerInterval();
-
-                        timerState = {{
-                            duration: selectedDuration,
-                            remaining: selectedDuration,
-                            running: false,
-                            completed: false,
-                            endTime: null
-                        }};
-
-                        saveState();
-                        updateDisplay();
-                    }}
-
-
-                    function completeTimer(
-                        playSound = true
-                    ) {{
-                        clearTimerInterval();
-
-                        timerState.remaining = 0;
-                        timerState.running = false;
-                        timerState.completed = true;
-                        timerState.endTime = null;
-
-                        saveState();
-                        updateDisplay();
-
-                        if (playSound) {{
-                            playCompletionSound();
-                        }}
-                    }}
-
-
-                    // -------------------------------------------------
-                    // INTERVAL MANAGEMENT
-                    // -------------------------------------------------
-
-                    function clearTimerInterval() {{
-                        if (timerInterval !== null) {{
-                            clearInterval(timerInterval);
-                            timerInterval = null;
-                        }}
-                    }}
-
-
-                    function beginInterval() {{
-                        clearTimerInterval();
-
-                        timerInterval = setInterval(() => {{
-                            const remaining =
-                                calculateRemainingTime();
-
-                            if (remaining <= 0) {{
-                                completeTimer(true);
-                                return;
-                            }}
-
-                            /*
-                            Save periodically so the paused value is
-                            always accurate if the iframe disappears.
-                            */
-                            saveState();
-                            updateDisplay();
-
-                        }}, 250);
-                    }}
-
-
-                    // -------------------------------------------------
-                    // COMPLETION SOUND
-                    // -------------------------------------------------
-
-                    function playCompletionSound() {{
-                        try {{
-                            const AudioContextClass =
-                                window.AudioContext
-                                || window.webkitAudioContext;
-
-                            const audioContext =
-                                new AudioContextClass();
-
-                            const oscillator =
-                                audioContext.createOscillator();
-
-                            const gainNode =
-                                audioContext.createGain();
-
-                            oscillator.connect(gainNode);
-                            gainNode.connect(
-                                audioContext.destination
-                            );
-
-                            oscillator.frequency.value = 660;
-                            oscillator.type = "sine";
-
-                            gainNode.gain.setValueAtTime(
-                                0.14,
-                                audioContext.currentTime
-                            );
-
-                            gainNode.gain
-                                .exponentialRampToValueAtTime(
-                                    0.001,
-                                    audioContext.currentTime + 1.2
-                                );
-
-                            oscillator.start();
-
-                            oscillator.stop(
-                                audioContext.currentTime + 1.2
-                            );
-
-                        }} catch (error) {{
-                            console.log(
-                                "Completion sound unavailable.",
-                                error
-                            );
-                        }}
-                    }}
-
-
-                    // -------------------------------------------------
-                    // RESTORE THE TIMER WHEN PAGE REOPENS
-                    // -------------------------------------------------
-
-                    loadState();
-
-                    if (
-                        timerState.running
-                        && timerState.endTime
-                    ) {{
-                        calculateRemainingTime();
-
-                        /*
-                        The timer may have finished while the user was
-                        on another SATSam page.
-                        */
-                        if (timerState.remaining <= 0) {{
-                            completeTimer(false);
-                        }} else {{
-                            saveState();
-                            updateDisplay();
-                            beginInterval();
-                        }}
-                    }} else {{
-                        updateDisplay();
-                    }}
-
-
-                    /*
-                    Keep the saved time accurate if the browser tab is
-                    hidden or restored.
-                    */
-                    document.addEventListener(
-                        "visibilitychange",
-                        () => {{
-                            if (
-                                document.visibilityState === "visible"
-                            ) {{
-                                if (
-                                    timerState.running
-                                    && timerState.endTime
-                                ) {{
-                                    calculateRemainingTime();
-
-                                    if (
-                                        timerState.remaining <= 0
-                                    ) {{
-                                        completeTimer(false);
-                                    }} else {{
-                                        updateDisplay();
-                                        beginInterval();
-                                    }}
-                                }}
-                            }}
-                        }}
-                    );
-                </script>
-            </body>
-            </html>
-            """
-
-            components.html(
-                timer_html,
-                height=430,
-                scrolling=False,
-            )
-
             st.caption(
-    "The timer continues while you use other SATSam pages. "
-    "Press Reset before changing the duration of an active session."
-)
+                "Pick a length, then press Start. Changing the length resets a "
+                "timer that hasn't started yet."
+            )
+            render_focus_timer(st.session_state.timer_length)
 
     with intention_col:
         with st.container(border=True):
@@ -5299,74 +4697,53 @@ elif page == "Focus Timer":
                 """
                 <div class="card-title">Set an intention</div>
                 <div class="card-subtitle">
-                    Decide exactly what you will accomplish
+                    A clear aim makes a focus block far easier to keep
                 </div>
                 """
             )
 
-            focus_activity = st.selectbox(
-                "Focus activity",
+            st.selectbox(
+                "What are you focusing on?",
                 [
                     "Adaptive practice",
-                    "Mistake review",
-                    "Concept lesson",
-                    "Timed module",
-                    "Reading practice",
-                    "Math practice",
+                    "Reviewing mistakes",
+                    "A timed module",
+                    "Learning a new skill",
+                    "Light review",
                 ],
+                index=0,
                 key="focus_activity",
             )
 
-            session_intention = st.text_area(
-                "Session intention",
-                placeholder=(
-                    "Example: I will carefully verify every "
-                    "substitution step before selecting an answer."
-                ),
-                height=135,
+            st.text_area(
+                "One sentence on what 'done' looks like",
+                value="",
+                height=90,
                 key="session_intention",
+                placeholder="e.g. Finish 10 algebra questions and log every miss.",
             )
 
-            distraction_mode = st.toggle(
+            st.toggle(
                 "Distraction-free reminder",
-                value=True,
+                value=False,
                 key="distraction_mode",
+                help="A gentle nudge to close everything you don't need.",
             )
 
-            if distraction_mode:
-                render_html(
-                    """
-                    <div class="ai-insight">
-                        <div class="ai-insight-label">
-                            Before you begin
-                        </div>
-                        <h3>Prepare your environment.</h3>
-                        <p>
-                            Silence notifications, close unrelated tabs,
-                            place your phone out of reach, and keep water
-                            nearby.
-                        </p>
-                    </div>
-                    """
+            if st.session_state.get("distraction_mode"):
+                st.caption(
+                    "Close every tab except this one. You can reopen the world in "
+                    f"{st.session_state.timer_length} minutes."
                 )
 
-            if session_intention.strip():
-                render_html(
-                    f"""
-                    <div class="coach-quote">
-                        Your commitment: {session_intention}
-                    </div>
-                    """
-                )
-            else:
-                render_html(
-                    """
-                    <div class="coach-quote">
-                        A clear intention makes it easier to notice when
-                        your attention begins to drift.
-                    </div>
-                    """
-                )
+        st.write("")
+        render_html(
+            """
+            <div class="coach-quote">
+                One unbroken block of focus beats an afternoon of half-attention.
+            </div>
+            """
+        )
 
 
 # ============================================================
@@ -5375,23 +4752,19 @@ elif page == "Focus Timer":
 
 elif page == "Settings":
     section_header(
-        "Preferences",
-        "Make SATSam feel like your study space",
-        "These settings save to a local file and drive how sessions and the "
-        "AI tutor behave.",
+        "Settings",
+        "Tune SATSam to fit you",
+        "Your preferences are saved on your own device.",
     )
 
-    settings_left, settings_right = st.columns(2, gap="large")
+    defaults_col, ai_col = st.columns(2, gap="large")
 
-    # ---------------- Session defaults ----------------
-    with settings_left:
+    with defaults_col:
         with st.container(border=True):
             render_html(
                 """
-                <div class="card-title">Targets &amp; session defaults</div>
-                <div class="card-subtitle">
-                    Pre-fill every new practice session and set your score goal
-                </div>
+                <div class="card-title">Session defaults</div>
+                <div class="card-subtitle">Used to pre-fill new practice sessions</div>
                 """
             )
 
@@ -5403,8 +4776,8 @@ elif page == "Settings":
                 key="study_goal",
             )
 
-            st.number_input(
-                "Target SAT score",
+            st.slider(
+                "Target score",
                 min_value=400,
                 max_value=1600,
                 step=10,
@@ -5415,71 +4788,46 @@ elif page == "Settings":
                 "Default subject",
                 [
                     "SATSam recommendation",
-                    "Balanced",
                     "Math",
                     "Reading and Writing",
+                    "Balanced",
                 ],
                 key="default_practice_subject",
             )
 
-            st.selectbox(
+            st.select_slider(
                 "Default starting difficulty",
-                ["Foundation", "Standard", "Challenging", "Test-level"],
+                options=["Foundation", "Standard", "Challenging", "Test-level"],
                 key="default_start_difficulty",
             )
 
             st.slider(
-                "Default questions per session",
+                "Default number of questions",
                 min_value=5,
                 max_value=30,
                 step=1,
                 key="default_practice_count",
             )
 
-            st.toggle(
-                "Explain each answer immediately",
-                key="auto_explain",
-            )
+            st.toggle("Explain answers automatically", key="auto_explain")
+            st.toggle("Show suggested timing during practice", key="show_timing")
 
-            st.toggle(
-                "Show timing guidance during practice",
-                key="show_timing",
-            )
-
-    # ---------------- AI tutor ----------------
-    with settings_right:
+    with ai_col:
         with st.container(border=True):
             render_html(
                 """
-                <div class="card-title">AI tutor</div>
+                <div class="card-title">Sam, your AI tutor</div>
                 <div class="card-subtitle">
-                    Connect a local Ollama model for custom explanations
+                    Runs on a local Ollama model — nothing leaves your machine
                 </div>
                 """
             )
 
-            st.toggle(
-                "Enable the AI tutor",
-                key="ai_enabled",
-                help="Turn on once your local Ollama model is running.",
-            )
-
-            st.text_input(
-                "Ollama host",
-                key="ai_host",
-                placeholder="http://localhost:11434",
-            )
-
-            st.text_input(
-                "Model name",
-                key="ai_model",
-                placeholder="e.g. qwen3:8b",
-                help="Run `ollama pull qwen3:8b` first. The very first response "
-                     "after launch is slow while the model loads into memory.",
-            )
-
+            st.toggle("Enable Sam (AI features)", key="ai_enabled")
+            st.text_input("Ollama host", key="ai_host")
+            st.text_input("Model", key="ai_model")
             st.slider(
-                "Response creativity (temperature)",
+                "Response creativity",
                 min_value=0.0,
                 max_value=1.0,
                 step=0.1,
@@ -5488,102 +4836,83 @@ elif page == "Settings":
 
             st.selectbox(
                 "Explanation style",
-                [
-                    "Concise and strategic",
-                    "Step-by-step",
-                    "Socratic questions",
-                    "Detailed tutor mode",
-                ],
+                list(COACH_STYLE_GUIDANCE.keys()),
                 key="explanation_style",
             )
-
             st.selectbox(
                 "Coach personality",
-                [
-                    "Warm and focused",
-                    "Direct and challenging",
-                    "Calm and encouraging",
-                ],
+                list(COACH_PERSONALITY_GUIDANCE.keys()),
                 key="coach_personality",
             )
 
-            st.toggle(
-                "Offer AI hints before revealing the answer",
-                key="ai_hints",
-            )
-
             if st.button("Test connection", use_container_width=True):
-                host = st.session_state.get("ai_host") or "http://localhost:11434"
-                reachable, detail = ollama_reachable(host)
-                if reachable and detail:
-                    st.success("Connected. Models available: " + ", ".join(detail))
-                elif reachable:
-                    st.warning("Connected, but no models are installed yet.")
+                with st.spinner("Reaching your local model…"):
+                    ok, info = ollama_reachable(
+                        st.session_state.ai_host or "http://localhost:11434"
+                    )
+                if ok:
+                    models = ", ".join(info) if info else "no models found"
+                    st.success(f"Connected. Available models: {models}")
+                    if st.session_state.ai_model not in info and info:
+                        st.caption(
+                            f"Heads up: '{st.session_state.ai_model}' isn't in that "
+                            "list. Pull it with your Ollama tool, or switch to one "
+                            "above."
+                        )
                 else:
-                    st.error(f"Could not reach Ollama: {detail}")
+                    st.error(
+                        "Couldn't reach Ollama. Make sure it's running, then try "
+                        f"again. ({info})"
+                    )
 
-    # ---------------- Prompt preview ----------------
-    with st.container(border=True):
-        render_html(
-            """
-            <div class="card-title">How Sam will sound</div>
-            <div class="card-subtitle">
-                The instructions sent to your local model, built from the two
-                settings above
-            </div>
-            """
-        )
-        render_html(
-            f'<div class="stimulus-box">{to_html_block(build_coach_system_prompt())}</div>'
-        )
-
-    # ---------------- Data & progress ----------------
+    # Data section.
     section_header(
         "Your data",
-        "Everything stays on your machine",
-        "Export a copy of your progress or clear it to start fresh.",
+        "It stays with you",
+        "Export a copy or start fresh whenever you like.",
     )
 
-    export_col, reset_col, save_col = st.columns(3)
+    with st.container(border=True):
+        data_col_1, data_col_2, data_col_3 = st.columns(3)
 
-    with export_col:
-        progress_json = json.dumps(
-            {
-                "history": [
-                    {**entry, "ts": entry["ts"].isoformat()}
-                    for entry in st.session_state.history
-                ],
-                "score_history": st.session_state.score_history,
-                "sessions_completed": st.session_state.sessions_completed,
-                "best_streak": st.session_state.best_streak,
-            },
-            indent=2,
-        )
-        st.download_button(
-            "Export progress",
-            data=progress_json,
-            file_name="satsam-progress.json",
-            mime="application/json",
-            use_container_width=True,
-            disabled=not st.session_state.history,
-        )
+        with data_col_1:
+            export_payload = json.dumps(
+                {
+                    "history": st.session_state.history,
+                    "score_history": st.session_state.score_history,
+                    "sessions_completed": st.session_state.sessions_completed,
+                },
+                default=str,
+                indent=2,
+            )
+            st.download_button(
+                "Export progress",
+                data=export_payload,
+                file_name="satsam-progress.json",
+                mime="application/json",
+                use_container_width=True,
+            )
 
-    with reset_col:
-        if st.button("Reset my progress", use_container_width=True):
-            st.session_state.history = []
-            st.session_state.score_history = []
-            st.session_state.sessions_completed = 0
-            st.session_state.best_streak = 0
-            st.session_state.practice_phase = "setup"
-            st.session_state.error_fingerprint_cache = {}
-            st.session_state.ai_explanations = {}
-            recompute_metrics()
-            st.success("Your progress has been cleared.")
+        with data_col_2:
+            if st.button("Reset progress", use_container_width=True):
+                st.session_state.history = []
+                st.session_state.score_history = []
+                st.session_state.sessions_completed = 0
+                st.session_state.best_streak = 0
+                st.session_state.ai_explanations = {}
+                st.session_state.error_fingerprint_cache = {}
+                st.session_state.ai_review_cache = {}
+                st.success("Progress cleared. Fresh start whenever you're ready.")
+                st.rerun()
 
-    with save_col:
-        if st.button("Save preferences", type="primary", use_container_width=True):
-            try:
-                save_settings()
-                st.success("Preferences saved to satsam-settings.json.")
-            except OSError as error:
-                st.warning(f"Could not write settings file: {error}")
+        with data_col_3:
+            if st.button(
+                "Save preferences",
+                type="primary",
+                use_container_width=True,
+            ):
+                try:
+                    save_settings()
+                    st.success("Preferences saved.")
+                except Exception as error:
+                    st.error(f"Couldn't save: {error}")

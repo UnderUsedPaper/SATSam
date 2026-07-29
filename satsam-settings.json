@@ -1,6 +1,6 @@
 {
   "study_goal": 45,
-  "target_score": 1520,
+  "target_score": 400,
   "sat_date": "2026-09-12",
   "default_practice_subject": "SATSam recommendation",
   "default_start_difficulty": "Standard",
@@ -13,129 +13,171 @@
   "ai_temperature": 0.7,
   "explanation_style": "Concise and strategic",
   "coach_personality": "Warm and focused",
-  "ai_hints": true,
+  "study_circumstances": "",
   "ai_study_plan": {
-    "strategy": "This week is organized to build a balanced diagnostic foundation by addressing key skills in both Reading and Writing, and Math. The lighter Friday is reserved for review and reflection, while the heavier weekend days focus on targeted practice and error analysis. The plan prioritizes skills with the highest potential impact on score improvement.",
+    "strategy": "This week is designed to help you build a strong foundation by focusing on key skills that will help you reach your target score. We\u2019ll start with a balanced mix of math and reading/writing to ensure you\u2019re prepared for all sections. Each day will include targeted practice and review to help you learn from your mistakes and build confidence. We\u2019ll keep things light on Sundays so you can rest and come back refreshed.",
     "days": [
       {
         "day": "Monday",
-        "minutes": 60,
+        "minutes": 45,
         "section": "mixed",
-        "focus": "Command of Evidence (Textual)",
-        "task": "Textual Evidence Analysis",
-        "rationale": "Command of Evidence is a critical skill for Reading and Writing, and early focus ensures foundational understanding before moving to more complex tasks.",
-        "completion_check": "Complete 27 questions in a Reading and Writing module with 32 minutes, then review all errors.",
-        "question_count": 27,
+        "focus": "Linear equations in one variable",
+        "task": "Build confidence with linear equations",
+        "rationale": "Linear equations are a core skill for the Math section, and starting with them will help you feel prepared for more complex problems later. This day will focus on building your confidence and accuracy with this skill.",
+        "completion_check": "Complete the targeted drill and review all mistakes",
+        "question_count": 15,
         "blocks": [
           {
-            "type": "timed_module",
-            "minutes": 32,
-            "title": "Reading and Writing Module: Command of Evidence (Textual)",
-            "description": "Take a full Reading and Writing module focusing on Command of Evidence (Textual) questions. Use the 32-minute time limit and answer all 27 questions. After the module, review all errors and analyze the cause.",
-            "question_count": 27
+            "type": "micro_lesson",
+            "minutes": 10,
+            "title": "Understanding Linear Equations in One Variable",
+            "description": "Review the basics of solving linear equations, including isolating variables and simplifying expressions. Focus on one-step and two-step equations.",
+            "question_count": 0
+          },
+          {
+            "type": "targeted_drill",
+            "minutes": 25,
+            "title": "Solving Linear Equations in One Variable",
+            "description": "Solve 15 linear equations in one variable. Use 1.5 minutes per question. Focus on identifying and correcting mistakes.",
+            "question_count": 15
           },
           {
             "type": "error_review",
-            "minutes": 28,
-            "title": "Review Command of Evidence (Textual) Errors",
-            "description": "Review all errors from the module, identify the cause (e.g., misreading, poor inference, or lack of evidence), and note patterns for future focus.",
+            "minutes": 10,
+            "title": "Review Mistakes and Learn from Them",
+            "description": "Go over any errors from the targeted drill. Identify patterns and write down strategies to avoid similar mistakes in the future.",
             "question_count": 0
           }
         ]
       },
       {
         "day": "Tuesday",
-        "minutes": 60,
-        "section": "math",
-        "focus": "Linear equations in two variables",
-        "task": "Linear Equations in Two Variables Practice",
-        "rationale": "Linear equations in two variables are a core math skill that often appears in multiple question types, and early focus ensures mastery before more complex topics.",
-        "completion_check": "Complete 22 questions in a Math module with 35 minutes, then review all errors.",
-        "question_count": 22,
+        "minutes": 45,
+        "section": "reading_writing",
+        "focus": "Central Ideas and Details",
+        "task": "Identify main ideas and supporting details",
+        "rationale": "Understanding central ideas and details is essential for success in the Reading and Writing section. This day will help you practice identifying these elements in passages.",
+        "completion_check": "Complete the targeted drill and review all mistakes",
+        "question_count": 15,
         "blocks": [
           {
-            "type": "timed_module",
-            "minutes": 35,
-            "title": "Math Module: Linear Equations in Two Variables",
-            "description": "Take a full Math module focusing on Linear equations in two variables questions. Use the 35-minute time limit and answer all 22 questions. After the module, review all errors and analyze the cause.",
-            "question_count": 22
+            "type": "micro_lesson",
+            "minutes": 10,
+            "title": "Understanding Central Ideas and Details",
+            "description": "Review how to identify the main idea of a passage and how to locate supporting details. Focus on how to use context clues and signal words.",
+            "question_count": 0
+          },
+          {
+            "type": "targeted_drill",
+            "minutes": 25,
+            "title": "Finding Central Ideas and Details",
+            "description": "Answer 15 questions about central ideas and details. Use 1.2 minutes per question. Focus on identifying and correcting mistakes.",
+            "question_count": 15
           },
           {
             "type": "error_review",
-            "minutes": 25,
-            "title": "Review Linear Equations in Two Variables Errors",
-            "description": "Review all errors from the module, identify the cause (e.g., calculation errors, misinterpretation of the problem, or lack of algebraic skills), and note patterns for future focus.",
+            "minutes": 10,
+            "title": "Review Mistakes and Learn from Them",
+            "description": "Go over any errors from the targeted drill. Identify patterns and write down strategies to avoid similar mistakes in the future.",
             "question_count": 0
           }
         ]
       },
       {
         "day": "Wednesday",
-        "minutes": 60,
-        "section": "reading_writing",
-        "focus": "Central Ideas and Details",
-        "task": "Central Ideas and Details Practice",
-        "rationale": "Central Ideas and Details are foundational for Reading and Writing, and early focus ensures foundational understanding before moving to more complex tasks.",
-        "completion_check": "Complete 27 questions in a Reading and Writing module with 32 minutes, then review all errors.",
-        "question_count": 27,
+        "minutes": 45,
+        "section": "math",
+        "focus": "Percentages",
+        "task": "Master percentage calculations",
+        "rationale": "Percentages are a common topic in the Math section, and mastering them will help you solve a variety of problems efficiently. This day will focus on building your confidence and accuracy with this skill.",
+        "completion_check": "Complete the targeted drill and review all mistakes",
+        "question_count": 15,
         "blocks": [
           {
-            "type": "timed_module",
-            "minutes": 32,
-            "title": "Reading and Writing Module: Central Ideas and Details",
-            "description": "Take a full Reading and Writing module focusing on Central Ideas and Details questions. Use the 32-minute time limit and answer all 27 questions. After the module, review all errors and analyze the cause.",
-            "question_count": 27
+            "type": "micro_lesson",
+            "minutes": 10,
+            "title": "Understanding Percentages",
+            "description": "Review the basics of percentages, including converting between fractions, decimals, and percentages. Focus on calculating percentages of numbers and percentage increase/decrease.",
+            "question_count": 0
+          },
+          {
+            "type": "targeted_drill",
+            "minutes": 25,
+            "title": "Solving Percentage Problems",
+            "description": "Solve 15 percentage problems. Use 1.5 minutes per question. Focus on identifying and correcting mistakes.",
+            "question_count": 15
           },
           {
             "type": "error_review",
-            "minutes": 28,
-            "title": "Review Central Ideas and Details Errors",
-            "description": "Review all errors from the module, identify the cause (e.g., misreading, poor inference, or lack of evidence), and note patterns for future focus.",
+            "minutes": 10,
+            "title": "Review Mistakes and Learn from Them",
+            "description": "Go over any errors from the targeted drill. Identify patterns and write down strategies to avoid similar mistakes in the future.",
             "question_count": 0
           }
         ]
       },
       {
         "day": "Thursday",
-        "minutes": 60,
-        "section": "math",
-        "focus": "Linear functions",
-        "task": "Linear Functions Practice",
-        "rationale": "Linear functions are a core math skill that often appears in multiple question types, and early focus ensures mastery before more complex topics.",
-        "completion_check": "Complete 22 questions in a Math module with 35 minutes, then review all errors.",
-        "question_count": 22,
+        "minutes": 45,
+        "section": "reading_writing",
+        "focus": "Inferences",
+        "task": "Draw logical inferences from text",
+        "rationale": "Inference questions are a key part of the Reading and Writing section, and practicing them will help you improve your ability to understand and interpret text. This day will focus on building your confidence and accuracy with this skill.",
+        "completion_check": "Complete the targeted drill and review all mistakes",
+        "question_count": 15,
         "blocks": [
           {
-            "type": "timed_module",
-            "minutes": 35,
-            "title": "Math Module: Linear Functions",
-            "description": "Take a full Math module focusing on Linear functions questions. Use the 35-minute time limit and answer all 22 questions. After the module, review all errors and analyze the cause.",
-            "question_count": 22
+            "type": "micro_lesson",
+            "minutes": 10,
+            "title": "Understanding Inference Questions",
+            "description": "Review how to make logical inferences from text. Focus on using context clues and prior knowledge to support your answers.",
+            "question_count": 0
+          },
+          {
+            "type": "targeted_drill",
+            "minutes": 25,
+            "title": "Drawing Inferences from Text",
+            "description": "Answer 15 inference questions. Use 1.2 minutes per question. Focus on identifying and correcting mistakes.",
+            "question_count": 15
           },
           {
             "type": "error_review",
-            "minutes": 25,
-            "title": "Review Linear Functions Errors",
-            "description": "Review all errors from the module, identify the cause (e.g., calculation errors, misinterpretation of the problem, or lack of algebraic skills), and note patterns for future focus.",
+            "minutes": 10,
+            "title": "Review Mistakes and Learn from Them",
+            "description": "Go over any errors from the targeted drill. Identify patterns and write down strategies to avoid similar mistakes in the future.",
             "question_count": 0
           }
         ]
       },
       {
         "day": "Friday",
-        "minutes": 35,
-        "section": "mixed",
-        "focus": "Review and Reflection",
-        "task": "Review and Reflect on Week",
-        "rationale": "Friday is a lighter day to allow for review and reflection on the week's work, focusing on key skills and error patterns to ensure understanding and retention.",
-        "completion_check": "Complete a 35-minute review session with a focus on key skills and error patterns.",
-        "question_count": 0,
+        "minutes": 45,
+        "section": "math",
+        "focus": "Linear functions",
+        "task": "Understand and graph linear functions",
+        "rationale": "Linear functions are a core skill for the Math section, and understanding them will help you solve a variety of problems efficiently. This day will focus on building your confidence and accuracy with this skill.",
+        "completion_check": "Complete the targeted drill and review all mistakes",
+        "question_count": 15,
         "blocks": [
           {
-            "type": "strategy_review",
-            "minutes": 35,
-            "title": "Review Key Skills and Error Patterns",
-            "description": "Review the key skills and error patterns from the week, focusing on areas that need improvement. Use this time to reflect on progress and plan for the next week.",
+            "type": "micro_lesson",
+            "minutes": 10,
+            "title": "Understanding Linear Functions",
+            "description": "Review the basics of linear functions, including slope, intercepts, and graphing. Focus on how to interpret and use linear equations in real-world contexts.",
+            "question_count": 0
+          },
+          {
+            "type": "targeted_drill",
+            "minutes": 25,
+            "title": "Solving Linear Function Problems",
+            "description": "Solve 15 linear function problems. Use 1.5 minutes per question. Focus on identifying and correcting mistakes.",
+            "question_count": 15
+          },
+          {
+            "type": "error_review",
+            "minutes": 10,
+            "title": "Review Mistakes and Learn from Them",
+            "description": "Go over any errors from the targeted drill. Identify patterns and write down strategies to avoid similar mistakes in the future.",
             "question_count": 0
           }
         ]
@@ -144,84 +186,77 @@
         "day": "Saturday",
         "minutes": 120,
         "section": "mixed",
-        "focus": "Inferences",
-        "task": "Inference Practice",
-        "rationale": "Inferences are a critical skill for Reading and Writing, and focused practice ensures mastery before moving to more complex tasks.",
-        "completion_check": "Complete 27 questions in a Reading and Writing module with 32 minutes, then review all errors, and complete 22 questions in a Math module with 35 minutes, then review all errors.",
-        "question_count": 49,
+        "focus": "Command of Evidence (Textual)",
+        "task": "Practice using evidence to support answers",
+        "rationale": "Command of Evidence (Textual) is a critical skill for the Reading and Writing section, and practicing it will help you improve your ability to support your answers with text. This day will focus on building your confidence and accuracy with this skill.",
+        "completion_check": "Complete the timed module and review all mistakes",
+        "question_count": 70,
         "blocks": [
           {
-            "type": "timed_module",
-            "minutes": 32,
-            "title": "Reading and Writing Module: Inferences",
-            "description": "Take a full Reading and Writing module focusing on Inferences questions. Use the 32-minute time limit and answer all 27 questions. After the module, review all errors and analyze the cause.",
-            "question_count": 27
-          },
-          {
-            "type": "error_review",
-            "minutes": 28,
-            "title": "Review Inference Errors",
-            "description": "Review all errors from the module, identify the cause (e.g., misreading, poor inference, or lack of evidence), and note patterns for future focus.",
+            "type": "micro_lesson",
+            "minutes": 10,
+            "title": "Learn the Command of Evidence (Textual) pattern",
+            "description": "Review the core rule and one worked example for Command of Evidence (Textual). Write down the decision process you should use.",
             "question_count": 0
           },
           {
-            "type": "timed_module",
-            "minutes": 35,
-            "title": "Math Module: Inferences",
-            "description": "Take a full Math module focusing on Inferences questions. Use the 35-minute time limit and answer all 22 questions. After the module, review all errors and analyze the cause.",
-            "question_count": 22
+            "type": "targeted_drill",
+            "minutes": 98,
+            "title": "Targeted Command of Evidence (Textual) drill",
+            "description": "Complete approximately 70 adaptive questions on Command of Evidence (Textual). Pause only after submitting each answer.",
+            "question_count": 70
           },
           {
             "type": "error_review",
-            "minutes": 25,
-            "title": "Review Inference Math Errors",
-            "description": "Review all errors from the module, identify the cause (e.g., calculation errors, misinterpretation of the problem, or lack of algebraic skills), and note patterns for future focus.",
+            "minutes": 12,
+            "title": "Correct and classify mistakes",
+            "description": "Redo missed and guessed questions, then record whether each miss came from knowledge, strategy, execution, or pacing.",
             "question_count": 0
           }
         ]
       },
       {
         "day": "Sunday",
-        "minutes": 120,
+        "minutes": 65,
         "section": "mixed",
         "focus": "Ratios, rates, proportional relationships, and units",
-        "task": "Ratios and Proportions Practice",
-        "rationale": "Ratios, rates, proportional relationships, and units are a core math skill that often appears in multiple question types, and focused practice ensures mastery before more complex topics.",
-        "completion_check": "Complete 22 questions in a Math module with 35 minutes, then review all errors, and complete 27 questions in a Reading and Writing module with 32 minutes, then review all errors.",
-        "question_count": 49,
+        "task": "Review and practice ratios and proportional relationships",
+        "rationale": "Ratios and proportional relationships are a key skill for the Math section, and reviewing them will help you feel more confident in solving related problems. This day will focus on building your confidence and accuracy with this skill.",
+        "completion_check": "Complete the targeted drill and review all mistakes",
+        "question_count": 15,
         "blocks": [
           {
-            "type": "timed_module",
-            "minutes": 35,
-            "title": "Math Module: Ratios, Rates, Proportions, and Units",
-            "description": "Take a full Math module focusing on Ratios, rates, proportional relationships, and units questions. Use the 35-minute time limit and answer all 22 questions. After the module, review all errors and analyze the cause.",
-            "question_count": 22
-          },
-          {
-            "type": "error_review",
-            "minutes": 25,
-            "title": "Review Ratios and Proportions Errors",
-            "description": "Review all errors from the module, identify the cause (e.g., calculation errors, misinterpretation of the problem, or lack of algebraic skills), and note patterns for future focus.",
+            "type": "micro_lesson",
+            "minutes": 10,
+            "title": "Understanding Ratios and Proportional Relationships",
+            "description": "Review the basics of ratios, rates, and proportional relationships. Focus on how to use these concepts to solve real-world problems.",
             "question_count": 0
           },
           {
-            "type": "timed_module",
-            "minutes": 32,
-            "title": "Reading and Writing Module: Ratios, Rates, Proportions, and Units",
-            "description": "Take a full Reading and Writing module focusing on Ratios, rates, proportional relationships, and units questions. Use the 32-minute time limit and answer all 27 questions. After the module, review all errors and analyze the cause.",
-            "question_count": 27
+            "type": "targeted_drill",
+            "minutes": 25,
+            "title": "Solving Ratio and Proportion Problems",
+            "description": "Solve 15 ratio and proportion problems. Use 1.5 minutes per question. Focus on identifying and correcting mistakes.",
+            "question_count": 15
           },
           {
             "type": "error_review",
-            "minutes": 28,
-            "title": "Review Ratios and Proportions Reading and Writing Errors",
-            "description": "Review all errors from the module, identify the cause (e.g., misreading, poor inference, or lack of evidence), and note patterns for future focus.",
+            "minutes": 10,
+            "title": "Review Mistakes and Learn from Them",
+            "description": "Go over any errors from the targeted drill. Identify patterns and write down strategies to avoid similar mistakes in the future.",
+            "question_count": 0
+          },
+          {
+            "type": "strategy_review",
+            "minutes": 20,
+            "title": "Reflect on Your Progress and Plan Ahead",
+            "description": "Take time to reflect on what you\u2019ve learned this week. Think about how you can continue to improve and what you need to focus on next week.",
             "question_count": 0
           }
         ]
       }
     ],
-    "weekly_focus": "This week focuses on strengthening Command of Evidence (Textual), Central Ideas and Details, Linear equations in two variables, Linear functions, and Inferences, with an emphasis on error analysis and targeted practice to improve the student's score.",
-    "generated_at": "2026-07-28T21:53:12.009390"
+    "weekly_focus": "Your highest priority is building a balanced baseline.",
+    "generated_at": "2026-07-29T17:57:17.183042"
   }
 }
