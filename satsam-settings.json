@@ -1,72 +1,72 @@
 {
-  "study_goal": 45,
-  "target_score": 400,
-  "sat_date": "2026-09-06",
-  "default_practice_subject": "SATSam recommendation",
-  "default_start_difficulty": "Standard",
-  "default_practice_count": 12,
+  "study_goal": 15,
+  "target_score": 1550,
+  "sat_date": "2026-09-12",
+  "default_practice_subject": "Reading and Writing",
+  "default_start_difficulty": "Foundation",
+  "default_practice_count": 5,
   "auto_explain": true,
-  "show_timing": true,
+  "show_timing": false,
   "ai_enabled": true,
-  "ai_host": "http://localhost:11434",
+  "ai_host": "http://localhost:8501/",
   "ai_model": "qwen3:8b",
-  "ai_temperature": 0.7,
-  "explanation_style": "Concise and strategic",
-  "coach_personality": "Warm and focused",
-  "ai_hints": true,
+  "ai_temperature": 0.6,
+  "explanation_style": "Step-by-step",
+  "coach_personality": "Calm and encouraging",
+  "ai_hints": false,
   "ai_study_plan": {
-    "strategy": "This week's plan prioritizes foundational skills in math and reading, starting with the weakest areas first while maintaining balance. We will focus on building confidence and familiarity with question types through targeted practice and review.",
+    "strategy": "This week's plan prioritizes improving the student's weakest skills in reading and writing, specifically transitions, inferences, and boundaries, while maintaining a balanced approach to math. The weekend will focus on targeted practice and review to ensure steady progress.",
     "days": [
       {
         "day": "Monday",
         "minutes": 45,
-        "focus": "Reading Comprehension",
-        "task": "Practice Passage Analysis",
-        "detail": "Complete 1 reading passage with 5 questions, focusing on main idea and detail retrieval."
+        "focus": "Transitions",
+        "task": "Transition Practice",
+        "detail": "Complete 3 transition-focused reading and writing questions with detailed explanations."
       },
       {
         "day": "Tuesday",
         "minutes": 45,
-        "focus": "Math Problem Solving",
-        "task": "Math Practice Set",
-        "detail": "Work through 10 math problems covering algebra and geometry with a focus on problem-solving strategies."
+        "focus": "Inferences",
+        "task": "Inference Drills",
+        "detail": "Work on 2 inference-based reading and writing questions with a focus on contextual clues."
       },
       {
         "day": "Wednesday",
         "minutes": 45,
-        "focus": "Reading Vocabulary",
-        "task": "Vocabulary in Context",
-        "detail": "Review 10 SAT vocabulary words and practice using them in context with reading passages."
+        "focus": "Boundaries",
+        "task": "Boundary Analysis",
+        "detail": "Practice 3 boundary-related reading and writing questions with an emphasis on sentence structure."
       },
       {
         "day": "Thursday",
         "minutes": 45,
-        "focus": "Math Data Analysis",
-        "task": "Data Interpretation Practice",
-        "detail": "Complete 5 data interpretation questions using charts and graphs."
+        "focus": "Math",
+        "task": "Math Review",
+        "detail": "Review equivalent expressions and solve 1 question with a focus on algebraic manipulation."
       },
       {
         "day": "Friday",
         "minutes": 45,
-        "focus": "Reading & Math Review",
-        "task": "Quick Review and Reflection",
-        "detail": "Review key concepts from the week, focusing on areas of confusion and reinforcing understanding."
+        "focus": "Reading and Writing",
+        "task": "Integrated Practice",
+        "detail": "Work on a mixed reading and writing section with a focus on transitions and inferences."
       },
       {
         "day": "Saturday",
-        "minutes": 120,
-        "focus": "Integrated Reasoning",
-        "task": "Full Practice Set",
-        "detail": "Complete a full SAT practice set (10 reading, 10 math) with a focus on time management and accuracy."
+        "minutes": 180,
+        "focus": "Math and Reading",
+        "task": "Full Section Practice",
+        "detail": "Complete a full math section and a full reading and writing section with time management."
       },
       {
         "day": "Sunday",
-        "minutes": 120,
-        "focus": "Error Analysis",
-        "task": "Review and Reflect",
-        "detail": "Review all mistakes from the practice set, analyze patterns, and create a plan for improvement."
+        "minutes": 180,
+        "focus": "Review and Weaknesses",
+        "task": "Weakness Review",
+        "detail": "Review all weak areas, focusing on transitions, inferences, and boundaries, with targeted practice."
       }
     ],
-    "weekly_focus": "Build foundational skills in reading and math through targeted practice and review, with a focus on improving accuracy and time management."
+    "weekly_focus": "This week's top priority is improving the student's weakest reading and writing skills while maintaining a balanced approach to math."
   }
 }
