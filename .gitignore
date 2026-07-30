@@ -1,0 +1,25 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- SATSam runtime files (generated on your machine, not source) ---
+satsam-settings.json
+satsam-progress.json
+
+# --- Streamlit ---
+.streamlit/secrets.toml
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
