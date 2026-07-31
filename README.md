@@ -30,7 +30,7 @@ SATSam provides a completely free, efficient SAT studying tool that caters towar
 
 
 ## How to Run
--pip install ollama
--pip install streamlit
--ollama pull qwen3:8b (or any ollama model)
--py -m streamlit run app.py
+pip install ollama
+pip install streamlit
+ollama pull qwen3:8b (or any ollama model)
+py -m streamlit run app.py
